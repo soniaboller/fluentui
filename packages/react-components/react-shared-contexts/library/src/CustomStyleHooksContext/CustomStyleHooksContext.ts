@@ -135,6 +135,7 @@ export type CustomStyleHooksContextValue = Partial<{
   useSkeletonItemStyles_unstable: CustomStyleHook;
   useSkeletonStyles_unstable: CustomStyleHook;
   useSliderStyles_unstable: CustomStyleHook;
+  useRangeSliderStyles_unstable: CustomStyleHook;
   useSpinButtonStyles_unstable: CustomStyleHook;
   useSpinnerStyles_unstable: CustomStyleHook;
   useSplitButtonStyles_unstable: CustomStyleHook;

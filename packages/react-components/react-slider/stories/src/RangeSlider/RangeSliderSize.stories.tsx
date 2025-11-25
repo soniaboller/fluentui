@@ -1,0 +1,31 @@
+import * as React from 'react';
+import type { JSXElement } from '@fluentui/react-components';
+import { Label, useId } from '@fluentui/react-components';
+import { RangeSlider } from '@fluentui/react-slider';
+
+export const Size = (): JSXElement => {
+  const mediumLabelId = useId('rangeslider-medium-label-');
+  const smallLabelId = useId('rangeslider-small-label-');
+
+  return (
+    <>
+      <div style={{ maxWidth: 320 }}>
+        <Label id={mediumLabelId}>Medium Range Slider</Label>
+        <RangeSlider aria-labelledby={mediumLabelId} size="medium" defaultValue={{ start: 30, end: 70 }} />
+      </div>
+
+      <div style={{ maxWidth: 320 }}>
+        <Label id={smallLabelId}>Small Range Slider</Label>
+        <RangeSlider aria-labelledby={smallLabelId} size="small" defaultValue={{ start: 35, end: 65 }} />
+      </div>
+    </>
+  );
+};
+
+Size.parameters = {
+  docs: {
+    description: {
+      story: 'RangeSlider is available in medium and small sizes. Medium is the default.',
+    },
+  },
+};
