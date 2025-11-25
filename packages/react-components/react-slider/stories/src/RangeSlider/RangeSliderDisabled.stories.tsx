@@ -7,10 +7,10 @@ export const Disabled = (): JSXElement => {
   const labelId = useId('rangeslider-disabled-label-');
 
   return (
-    <div style={{ maxWidth: 320 }}>
+    <>
       <Label id={labelId}>Disabled Example</Label>
       <RangeSlider aria-labelledby={labelId} defaultValue={{ start: 20, end: 60 }} disabled />
-    </div>
+    </>
   );
 };
 

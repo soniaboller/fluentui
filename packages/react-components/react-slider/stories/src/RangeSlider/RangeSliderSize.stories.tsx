@@ -9,15 +9,11 @@ export const Size = (): JSXElement => {
 
   return (
     <>
-      <div style={{ maxWidth: 320 }}>
-        <Label id={mediumLabelId}>Medium Range Slider</Label>
-        <RangeSlider aria-labelledby={mediumLabelId} size="medium" defaultValue={{ start: 30, end: 70 }} />
-      </div>
+      <Label id={mediumLabelId}>Medium Range Slider</Label>
+      <RangeSlider aria-labelledby={mediumLabelId} size="medium" defaultValue={{ start: 30, end: 70 }} />
 
-      <div style={{ maxWidth: 320 }}>
-        <Label id={smallLabelId}>Small Range Slider</Label>
-        <RangeSlider aria-labelledby={smallLabelId} size="small" defaultValue={{ start: 35, end: 65 }} />
-      </div>
+      <Label id={smallLabelId}>Small Range Slider</Label>
+      <RangeSlider aria-labelledby={smallLabelId} size="small" defaultValue={{ start: 35, end: 65 }} />
     </>
   );
 };

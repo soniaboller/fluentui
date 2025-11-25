@@ -7,10 +7,10 @@ export const Step = (): JSXElement => {
   const labelId = useId('rangeslider-step-label-');
 
   return (
-    <div style={{ maxWidth: 320 }}>
+    <>
       <Label id={labelId}>Step Example</Label>
       <RangeSlider aria-labelledby={labelId} step={5} min={0} max={50} defaultValue={{ start: 10, end: 40 }} />
-    </div>
+    </>
   );
 };
 

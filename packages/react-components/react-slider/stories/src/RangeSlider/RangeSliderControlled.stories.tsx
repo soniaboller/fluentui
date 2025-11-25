@@ -14,12 +14,10 @@ export const Controlled = (): JSXElement => {
 
   return (
     <>
-      <div style={{ maxWidth: 320 }}>
-        <Label id={labelId}>
-          Controlled Range Slider [ Start: {value.start} / End: {value.end} ]
-        </Label>
-        <RangeSlider aria-labelledby={labelId} min={0} max={100} value={value} onChange={onChange} />
-      </div>
+      <Label id={labelId}>
+        Controlled Range Slider [ Start: {value.start} / End: {value.end} ]
+      </Label>
+      <RangeSlider aria-labelledby={labelId} min={0} max={100} value={value} onChange={onChange} />
       <Button onClick={reset}>Reset</Button>
     </>
   );

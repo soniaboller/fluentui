@@ -6,9 +6,9 @@ export const Default = (props: Partial<RangeSliderProps>) => {
   const labelId = useId('rangeslider-label-');
 
   return (
-    <div style={{ maxWidth: 320 }}>
+    <>
       <Label id={labelId}>Basic Range Slider Example</Label>
       <RangeSlider aria-labelledby={labelId} defaultValue={{ start: 20, end: 80 }} {...props} />
-    </div>
+    </>
   );
 };

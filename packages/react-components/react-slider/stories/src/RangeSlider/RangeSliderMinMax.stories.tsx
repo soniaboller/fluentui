@@ -8,8 +8,6 @@ const useStyles = makeStyles({
     display: 'flex',
     alignItems: 'center',
     columnGap: '0.5rem',
-    maxWidth: '320px',
-    width: '100%',
   },
 });
 
