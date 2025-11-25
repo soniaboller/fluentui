@@ -38,7 +38,7 @@ import {
   IDataPoint,
 } from '../../index';
 import { FocusZoneDirection } from '@fluentui/react-focus';
-import { formatDateToLocaleString } from '@fluentui/chart-utilities';
+import { formatDateToLocaleString, isInvalidValue } from '@fluentui/chart-utilities';
 import {
   ChartTypes,
   IAxisData,
@@ -68,7 +68,7 @@ import {
   calcRequiredWidth,
 } from '../../utilities/index';
 import { IChart, IImageExportOptions } from '../../types/index';
-import { toImage } from '../../utilities/image-export-utils';
+import { exportChartsAsImage } from '../../utilities/image-export-utils';
 import type { JSXElement } from '@fluentui/utilities';
 
 const getClassNames = classNamesFunction<IVerticalStackedBarChartStyleProps, IVerticalStackedBarChartStyles>();
@@ -314,7 +314,12 @@ export class VerticalStackedBarChartBase
   }
 
   public toImage = (opts?: IImageExportOptions): Promise<string> => {
-    return toImage(this._cartesianChartRef.current?.chartContainer, this._legendsRef.current?.toSVG, this._isRtl, opts);
+    return exportChartsAsImage(
+      [{ container: this._cartesianChartRef.current?.chartContainer }],
+      this.props.hideLegend ? undefined : this._legendsRef.current?.toSVG,
+      this._isRtl,
+      opts,
+    );
   };
 
   /**
@@ -568,7 +573,10 @@ export class VerticalStackedBarChartBase
     const { palette } = theme!;
     // eslint-disable-next-line @typescript-eslint/no-deprecated
     this._colors = this.props.colors || [palette.blueLight, palette.blue, palette.blueMid, palette.red, palette.black];
-    this._xAxisType = getTypeOfAxis(this.props.data[0].xAxisPoint, true) as XAxisTypes;
+    const firstXValue = this._points[0]?.xAxisPoint;
+    this._xAxisType = isInvalidValue(firstXValue)
+      ? XAxisTypes.StringAxis
+      : (getTypeOfAxis(firstXValue, true) as XAxisTypes);
     this._lineObject = this._getFormattedLineData(this.props.data);
     this._xAxisInnerPadding = getScalePadding(
       this.props.xAxisInnerPadding,
@@ -702,7 +710,7 @@ export class VerticalStackedBarChartBase
         legendsOfLine.push(legend);
       });
     }
-    const totalLegends: ILegend[] = legendsOfLine.concat(actions);
+    const totalLegends: ILegend[] = actions.concat(legendsOfLine);
     return (
       <Legends
         legends={totalLegends}
