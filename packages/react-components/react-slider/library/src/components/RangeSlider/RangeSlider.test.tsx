@@ -19,12 +19,12 @@ describe('RangeSlider', () => {
     expect(container.querySelector('.fui-RangeSlider__rail')).toBeTruthy();
   });
 
-  it('sets aria metadata on thumbs', () => {
+  it('sets aria metadata on inputs', () => {
     render(<RangeSlider defaultValue={{ start: 5, end: 15 }} min={0} max={20} />);
 
-    const thumbs = screen.getAllByRole('slider');
-    expect(thumbs).toHaveLength(2);
-    expect(thumbs[0].getAttribute('aria-valuenow')).toBe('5');
-    expect(thumbs[1].getAttribute('aria-valuenow')).toBe('15');
+    const sliders = screen.getAllByRole('slider');
+    expect(sliders).toHaveLength(2);
+    expect(sliders[0].getAttribute('aria-valuenow')).toBe('5');
+    expect(sliders[1].getAttribute('aria-valuenow')).toBe('15');
   });
 });

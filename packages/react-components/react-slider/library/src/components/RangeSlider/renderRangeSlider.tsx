@@ -13,11 +13,13 @@ export const renderRangeSlider_unstable = (state: RangeSliderState): JSXElement 
 
   return (
     <state.root>
-      <state.startInput />
-      <state.endInput />
       <state.rail />
-      <state.startThumb />
-      <state.endThumb />
+      <state.startThumb>
+        <state.startInput />
+      </state.startThumb>
+      <state.endThumb>
+        <state.endInput />
+      </state.endThumb>
     </state.root>
   );
 };

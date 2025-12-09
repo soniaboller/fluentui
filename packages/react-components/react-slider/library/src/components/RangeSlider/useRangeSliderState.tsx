@@ -1,7 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { clamp, useControllableState, useEventCallback } from '@fluentui/react-utilities';
+import {
+  clamp,
+  mergeCallbacks,
+  useControllableState,
+  useEventCallback,
+  useMergedRefs,
+} from '@fluentui/react-utilities';
 import { useFluent_unstable as useFluent } from '@fluentui/react-shared-contexts';
 import { rangeSliderCSSVars } from './useRangeSliderStyles.styles';
 import type { RangeSliderProps, RangeSliderState, RangeSliderValue } from './RangeSlider.types';
@@ -31,6 +37,7 @@ export const useRangeSliderState_unstable = (state: RangeSliderState, props: Ran
 
   const { min = 0, max = 100, step } = props;
   const { dir } = useFluent();
+  const stepValue = step !== undefined && step > 0 ? step : 1;
   const [currentValues, setCurrentValues] = useControllableState<[number, number]>({
     state: toTuple(props.value),
     defaultState: toTuple(props.defaultValue),
@@ -49,166 +56,175 @@ export const useRangeSliderState_unstable = (state: RangeSliderState, props: Ran
   const upperPercent = getPercent(upperValue, min, max);
 
   const activeDragThumb = React.useRef<'start' | 'end' | null>(null);
+  const pointerIdRef = React.useRef<number | null>(null);
   const interactiveThumbRef = React.useRef<'start' | 'end'>('end');
+
+  const rootRef = React.useRef<HTMLDivElement | null>(null);
+  const railRef = React.useRef<HTMLDivElement | null>(null);
+  const startInputRef = React.useRef<HTMLInputElement | null>(null);
+  const endInputRef = React.useRef<HTMLInputElement | null>(null);
+  const startThumbRef = React.useRef<HTMLDivElement | null>(null);
+  const endThumbRef = React.useRef<HTMLDivElement | null>(null);
+
+  state.root.ref = useMergedRefs(state.root.ref, rootRef);
+  state.rail.ref = useMergedRefs(state.rail.ref, railRef);
+  state.startInput.ref = useMergedRefs(state.startInput.ref, startInputRef);
+  state.endInput.ref = useMergedRefs(state.endInput.ref, endInputRef);
+  state.startThumb.ref = useMergedRefs(state.startThumb.ref, startThumbRef);
+  state.endThumb.ref = useMergedRefs(state.endThumb.ref, endThumbRef);
 
   const updateValues = useEventCallback((newValues: [number, number], ev?: React.ChangeEvent<HTMLInputElement>) => {
     setCurrentValues(newValues);
     props.onChange?.(ev ?? createSyntheticChangeEvent(newValues[1]), { value: toValueObject(newValues) });
   });
 
-  const stepValue = step !== undefined && step > 0 ? step : 1;
+  const getRailRect = React.useCallback(
+    () => railRef.current?.getBoundingClientRect() ?? rootRef.current?.getBoundingClientRect() ?? null,
+    [],
+  );
 
-  const onStartThumbKeyDown = useEventCallback((ev: React.KeyboardEvent) => {
-    if (props.disabled) {
-      return;
-    }
-
-    let newValue = lowerValue;
-    switch (ev.key) {
-      case 'ArrowLeft':
-      case 'ArrowDown':
-        ev.preventDefault();
-        newValue = Math.max(lowerValue - stepValue, min);
-        updateValues([newValue, upperValue]);
-        break;
-      case 'ArrowRight':
-      case 'ArrowUp':
-        ev.preventDefault();
-        newValue = Math.min(lowerValue + stepValue, upperValue);
-        updateValues([newValue, upperValue]);
-        break;
-      case 'Home':
-        ev.preventDefault();
-        updateValues([min, upperValue]);
-        break;
-      case 'End':
-        ev.preventDefault();
-        updateValues([upperValue, upperValue]);
-        break;
-      case 'PageDown':
-        ev.preventDefault();
-        newValue = Math.max(lowerValue - stepValue * 10, min);
-        updateValues([newValue, upperValue]);
-        break;
-      case 'PageUp':
-        ev.preventDefault();
-        newValue = Math.min(lowerValue + stepValue * 10, upperValue);
-        updateValues([newValue, upperValue]);
-        break;
-    }
-  });
-
-  const onEndThumbKeyDown = useEventCallback((ev: React.KeyboardEvent) => {
-    if (props.disabled) {
-      return;
-    }
-
-    let newValue = upperValue;
-    switch (ev.key) {
-      case 'ArrowLeft':
-      case 'ArrowDown':
-        ev.preventDefault();
-        newValue = Math.max(upperValue - stepValue, lowerValue);
-        updateValues([lowerValue, newValue]);
-        break;
-      case 'ArrowRight':
-      case 'ArrowUp':
-        ev.preventDefault();
-        newValue = Math.min(upperValue + stepValue, max);
-        updateValues([lowerValue, newValue]);
-        break;
-      case 'Home':
-        ev.preventDefault();
-        updateValues([lowerValue, lowerValue]);
-        break;
-      case 'End':
-        ev.preventDefault();
-        updateValues([lowerValue, max]);
-        break;
-      case 'PageDown':
-        ev.preventDefault();
-        newValue = Math.max(upperValue - stepValue * 10, lowerValue);
-        updateValues([lowerValue, newValue]);
-        break;
-      case 'PageUp':
-        ev.preventDefault();
-        newValue = Math.min(upperValue + stepValue * 10, max);
-        updateValues([lowerValue, newValue]);
-        break;
-    }
-  });
-
-  const determineClosestThumbFromPointer = React.useCallback(
-    (ev: { currentTarget: Element; clientX: number; clientY: number }) => {
-      const rect = ev.currentTarget.getBoundingClientRect();
-      const length = state.vertical ? rect.height : rect.width;
-      if (!length) {
-        return 'end' as const;
+  const getPointerValue = React.useCallback(
+    (clientX: number, clientY: number) => {
+      const rect = getRailRect();
+      if (!rect) {
+        return null;
       }
 
-      const ratio = state.vertical ? (rect.bottom - ev.clientY) / rect.height : (ev.clientX - rect.left) / rect.width;
-      const pointerValue = clamp(min + ratio * (max - min), min, max);
+      if (state.vertical) {
+        if (!rect.height) {
+          return null;
+        }
+        const offset = rect.bottom - clientY;
+        const ratio = clamp(offset / rect.height, 0, 1);
+        return min + ratio * (max - min);
+      }
 
-      const distanceToStart = Math.abs(pointerValue - lowerValue);
-      const distanceToEnd = Math.abs(pointerValue - upperValue);
+      if (!rect.width) {
+        return null;
+      }
+
+      let ratio = (clientX - rect.left) / rect.width;
+      if (dir === 'rtl') {
+        ratio = 1 - ratio;
+      }
+
+      ratio = clamp(ratio, 0, 1);
+      return min + ratio * (max - min);
+    },
+    [dir, getRailRect, max, min, state.vertical],
+  );
+
+  const determineClosestThumb = React.useCallback(
+    (value: number) => {
+      const distanceToStart = Math.abs(value - lowerValue);
+      const distanceToEnd = Math.abs(value - upperValue);
       return distanceToStart <= distanceToEnd ? 'start' : 'end';
     },
-    [state.vertical, min, max, lowerValue, upperValue],
+    [lowerValue, upperValue],
   );
 
-  const setThumbFromPointerEvent = useEventCallback(
-    (ev: React.MouseEvent<HTMLInputElement> | React.PointerEvent<HTMLInputElement>) => {
-      if (props.disabled) {
-        return;
-      }
+  const focusThumbInput = React.useCallback((thumb: 'start' | 'end') => {
+    const input = thumb === 'start' ? startInputRef.current : endInputRef.current;
+    input?.focus();
+  }, []);
 
-      if (ev.type === 'mousedown' && typeof window !== 'undefined' && window.PointerEvent) {
-        return;
+  const clampToStep = React.useCallback(
+    (value: number) => {
+      if (!stepValue) {
+        return clamp(value, min, max);
       }
-
-      const closerThumb = determineClosestThumbFromPointer(ev);
-      activeDragThumb.current = closerThumb;
-      interactiveThumbRef.current = closerThumb;
-      ev.currentTarget.value = String(closerThumb === 'start' ? lowerValue : upperValue);
+      const steps = Math.round((value - min) / stepValue);
+      const snapped = min + steps * stepValue;
+      return clamp(snapped, min, max);
     },
+    [max, min, stepValue],
   );
 
-  const updateValuesFromInput = useEventCallback((rawValue: number, ev?: React.ChangeEvent<HTMLInputElement>) => {
+  const updateThumbFromPointerValue = useEventCallback((value: number, thumb?: 'start' | 'end') => {
     if (props.disabled) {
       return;
     }
 
-    if (activeDragThumb.current === null) {
-      const distanceToStart = Math.abs(rawValue - lowerValue);
-      const distanceToEnd = Math.abs(rawValue - upperValue);
-      const closerThumb = distanceToStart <= distanceToEnd ? 'start' : 'end';
-      activeDragThumb.current = closerThumb;
-      interactiveThumbRef.current = closerThumb;
+    const targetThumb = thumb ?? activeDragThumb.current ?? determineClosestThumb(value);
+    const snappedValue = clampToStep(value);
+
+    if (targetThumb === 'start') {
+      const newStart = Math.min(snappedValue, upperValue);
+      updateValues([newStart, upperValue], createSyntheticChangeEvent(newStart));
+      return;
     }
 
-    let newValues: [number, number];
-    if (activeDragThumb.current === 'start') {
-      newValues = [clamp(rawValue, min, upperValue), upperValue];
-    } else {
-      newValues = [lowerValue, clamp(rawValue, lowerValue, max)];
-    }
-
-    updateValues(newValues, ev);
+    const newEnd = Math.max(snappedValue, lowerValue);
+    updateValues([lowerValue, newEnd], createSyntheticChangeEvent(newEnd));
   });
 
-  const clearActiveDragThumb = useEventCallback(() => {
+  const getThumbFromTarget = React.useCallback((target: EventTarget | null): 'start' | 'end' | null => {
+    if (!(target instanceof Node)) {
+      return null;
+    }
+    if (startThumbRef.current?.contains(target)) {
+      return 'start';
+    }
+    if (endThumbRef.current?.contains(target)) {
+      return 'end';
+    }
+    return null;
+  }, []);
+
+  const handlePointerDown = useEventCallback((ev: React.PointerEvent<HTMLDivElement>) => {
     if (props.disabled) {
       return;
     }
+
+    const pointerValue = getPointerValue(ev.clientX, ev.clientY);
+    if (pointerValue === null) {
+      return;
+    }
+
+    const targetThumb = getThumbFromTarget(ev.target) ?? determineClosestThumb(pointerValue);
+    activeDragThumb.current = targetThumb;
+    interactiveThumbRef.current = targetThumb;
+    pointerIdRef.current = ev.pointerId;
+    focusThumbInput(targetThumb);
+    ev.preventDefault();
+    ev.currentTarget.setPointerCapture(ev.pointerId);
+    updateThumbFromPointerValue(pointerValue, targetThumb);
+  });
+
+  const handlePointerMove = useEventCallback((ev: React.PointerEvent<HTMLDivElement>) => {
+    if (props.disabled || pointerIdRef.current !== ev.pointerId || activeDragThumb.current === null) {
+      return;
+    }
+
+    const pointerValue = getPointerValue(ev.clientX, ev.clientY);
+    if (pointerValue === null) {
+      return;
+    }
+
+    ev.preventDefault();
+    updateThumbFromPointerValue(pointerValue, activeDragThumb.current);
+  });
+
+  const releasePointer = React.useCallback((target: EventTarget & Element, pointerId: number) => {
+    if (target.hasPointerCapture(pointerId)) {
+      target.releasePointerCapture(pointerId);
+    }
+    pointerIdRef.current = null;
     activeDragThumb.current = null;
+  }, []);
+
+  const handlePointerEnd = useEventCallback((ev: React.PointerEvent<HTMLDivElement>) => {
+    if (pointerIdRef.current !== ev.pointerId) {
+      return;
+    }
+    releasePointer(ev.currentTarget, ev.pointerId);
   });
 
-  const onRangeInputChange: React.ChangeEventHandler<HTMLInputElement> = useEventCallback(ev => {
-    updateValuesFromInput(Number(ev.currentTarget.value), ev);
-  });
-
-  const onRangeInputInput: React.FormEventHandler<HTMLInputElement> = useEventCallback(ev => {
-    updateValuesFromInput(Number(ev.currentTarget.value));
+  const handlePointerCancel = useEventCallback((ev: React.PointerEvent<HTMLDivElement>) => {
+    if (pointerIdRef.current !== ev.pointerId) {
+      return;
+    }
+    releasePointer(ev.currentTarget, ev.pointerId);
   });
 
   const stepPercent = step !== undefined && step > 0 && max !== min ? `${(step * 100) / (max - min)}%` : undefined;
@@ -229,60 +245,70 @@ export const useRangeSliderState_unstable = (state: RangeSliderState, props: Ran
   state.startInput.max = upperValue;
   state.startInput.step = step;
   state.startInput.disabled = props.disabled;
-  state.startInput['aria-hidden'] = true;
-  state.startInput.tabIndex = -1;
+  state.startInput.onChange = mergeCallbacks(
+    state.startInput.onChange,
+    useEventCallback(ev => {
+      if (props.disabled) {
+        return;
+      }
+      const rawValue = Number(ev.currentTarget.value);
+      const newStart = Math.min(clampToStep(rawValue), upperValue);
+      updateValues([newStart, upperValue], ev);
+    }),
+  );
 
-  const interactiveThumb = activeDragThumb.current ?? interactiveThumbRef.current ?? 'end';
-  state.endInput.value = String(interactiveThumb === 'start' ? lowerValue : upperValue);
-  state.endInput.min = min;
+  state.startInput.onFocus = mergeCallbacks(
+    state.startInput.onFocus,
+    useEventCallback(() => {
+      interactiveThumbRef.current = 'start';
+    }),
+  );
+
+  state.endInput.value = String(upperValue);
+  state.endInput.min = lowerValue;
   state.endInput.max = max;
   state.endInput.step = step;
   state.endInput.disabled = props.disabled;
-  state.endInput['aria-hidden'] = true;
-  state.endInput.tabIndex = -1;
-  state.endInput.onChange = onRangeInputChange;
-  state.endInput.onInput = onRangeInputInput;
-  state.endInput.onPointerDown = setThumbFromPointerEvent;
-  state.endInput.onPointerUp = clearActiveDragThumb;
-  state.endInput.onPointerCancel = clearActiveDragThumb;
-  state.endInput.onMouseDown = setThumbFromPointerEvent;
-  state.endInput.onMouseUp = clearActiveDragThumb;
-  state.endInput.onMouseLeave = clearActiveDragThumb;
-  state.endInput.onPointerLeave = clearActiveDragThumb;
+  state.endInput.onChange = mergeCallbacks(
+    state.endInput.onChange,
+    useEventCallback(ev => {
+      if (props.disabled) {
+        return;
+      }
+      const rawValue = Number(ev.currentTarget.value);
+      const newEnd = Math.max(clampToStep(rawValue), lowerValue);
+      updateValues([lowerValue, newEnd], ev);
+    }),
+  );
+
+  state.endInput.onFocus = mergeCallbacks(
+    state.endInput.onFocus,
+    useEventCallback(() => {
+      interactiveThumbRef.current = 'end';
+    }),
+  );
+
+  state.root.onPointerDown = mergeCallbacks(state.root.onPointerDown, handlePointerDown);
+  state.root.onPointerMove = mergeCallbacks(state.root.onPointerMove, handlePointerMove);
+  state.root.onPointerUp = mergeCallbacks(state.root.onPointerUp, handlePointerEnd);
+  state.root.onPointerCancel = mergeCallbacks(state.root.onPointerCancel, handlePointerCancel);
 
   const labelledBy = props['aria-labelledby'];
   if (labelledBy) {
-    if (!state.startThumb['aria-labelledby']) {
-      state.startThumb['aria-labelledby'] = labelledBy;
+    if (!state.startInput['aria-labelledby']) {
+      state.startInput['aria-labelledby'] = labelledBy;
     }
-    if (!state.endThumb['aria-labelledby']) {
-      state.endThumb['aria-labelledby'] = labelledBy;
+    if (!state.endInput['aria-labelledby']) {
+      state.endInput['aria-labelledby'] = labelledBy;
     }
   }
 
-  state.startThumb.tabIndex = props.disabled ? -1 : 0;
-  state.startThumb.role = 'slider';
-  state.startThumb['aria-valuemin'] = min;
-  state.startThumb['aria-valuemax'] = upperValue;
-  state.startThumb['aria-valuenow'] = lowerValue;
-  state.startThumb['aria-valuetext'] = `${lowerValue}`;
-  state.startThumb['aria-disabled'] = props.disabled || undefined;
-  state.startThumb.onKeyDown = onStartThumbKeyDown;
-  state.startThumb.onFocus = useEventCallback(() => {
-    interactiveThumbRef.current = 'start';
-  });
-
-  state.endThumb.tabIndex = props.disabled ? -1 : 0;
-  state.endThumb.role = 'slider';
-  state.endThumb['aria-valuemin'] = lowerValue;
-  state.endThumb['aria-valuemax'] = max;
-  state.endThumb['aria-valuenow'] = upperValue;
-  state.endThumb['aria-valuetext'] = `${upperValue}`;
-  state.endThumb['aria-disabled'] = props.disabled || undefined;
-  state.endThumb.onKeyDown = onEndThumbKeyDown;
-  state.endThumb.onFocus = useEventCallback(() => {
-    interactiveThumbRef.current = 'end';
-  });
+  state.startThumb.tabIndex = undefined;
+  state.startThumb.role = 'presentation';
+  // state.startThumb['aria-hidden'] = true;
+  state.endThumb.tabIndex = undefined;
+  state.endThumb.role = 'presentation';
+  // state.endThumb['aria-hidden'] = true;
 
   return state;
 };

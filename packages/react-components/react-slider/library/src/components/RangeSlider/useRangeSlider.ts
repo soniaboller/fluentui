@@ -71,7 +71,8 @@ export const useRangeSlider_unstable = (
     }),
   };
 
-  state.root.ref = useMergedRefs(state.root.ref, useFocusWithin<HTMLDivElement>());
+  state.startThumb.ref = useMergedRefs(state.startThumb.ref, useFocusWithin<HTMLDivElement>());
+  state.endThumb.ref = useMergedRefs(state.endThumb.ref, useFocusWithin<HTMLDivElement>());
 
   useRangeSliderState_unstable(state, props);
 

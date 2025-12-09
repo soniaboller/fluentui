@@ -106,14 +106,6 @@ const useRootStyles = makeStyles({
       [rangeSliderProgressColorVar]: 'GrayText',
     },
   },
-  focusIndicatorHorizontal: createFocusOutlineStyle({
-    selector: 'focus-within',
-    style: { outlineOffset: { top: '-2px', bottom: '-2px', left: '-4px', right: '-4px' } },
-  }),
-  focusIndicatorVertical: createFocusOutlineStyle({
-    selector: 'focus-within',
-    style: { outlineOffset: { top: '-2px', bottom: '-2px', left: '4px', right: '4px' } },
-  }),
 });
 
 const useRailStyles = makeStyles({
@@ -187,12 +179,13 @@ const useThumbStyles = makeStyles({
     position: 'absolute',
     width: `var(${rangeSliderThumbSizeVar})`,
     height: `var(${rangeSliderThumbSizeVar})`,
-    pointerEvents: 'none',
+    pointerEvents: 'auto',
     outlineStyle: 'none',
     forcedColorAdjust: 'none',
     borderRadius: tokens.borderRadiusCircular,
     boxShadow: `0 0 0 calc(var(${rangeSliderThumbSizeVar}) * .2) ${tokens.colorNeutralBackground1} inset`,
     backgroundColor: `var(${rangeSliderThumbColorVar})`,
+
     '::before': {
       position: 'absolute',
       top: '0px',
@@ -230,41 +223,36 @@ const useThumbStyles = makeStyles({
     transform: 'translateY(50%)',
     bottom: `var(${endThumbPositionVar})`,
   },
+  focusIndicatorHorizontal: createFocusOutlineStyle({
+    selector: 'focus-within',
+    style: { outlineOffset: { top: '0px', bottom: '0px', left: '0px', right: '0px' } },
+  }),
+  focusIndicatorVertical: createFocusOutlineStyle({
+    selector: 'focus-within',
+    style: { outlineOffset: { top: '0px', bottom: '0px', left: '0px', right: '0px' } },
+  }),
 });
 
 const useInputStyles = makeStyles({
-  base: {
-    opacity: 0,
-    gridRowStart: '1',
-    gridRowEnd: '-1',
-    gridColumnStart: '1',
-    gridColumnEnd: '-1',
-    padding: 0,
+  thumbInput: {
+    position: 'absolute',
+    inset: 0,
+    width: '100%',
+    height: '100%',
     margin: 0,
-  },
-  interactive: {
+    padding: 0,
+    border: 0,
+    backgroundColor: 'transparent',
+    color: 'transparent',
+    caretColor: 'transparent',
+    outlineStyle: 'none',
+    appearance: 'none',
+    WebkitAppearance: 'none',
+    opacity: 0,
     cursor: 'pointer',
-  },
-  passive: {
-    pointerEvents: 'none',
   },
   disabled: {
     cursor: 'default',
-  },
-  horizontal: {
-    height: `var(${rangeSliderThumbSizeVar})`,
-    width: '100%',
-  },
-  vertical: {
-    height: '100%',
-    width: `var(${rangeSliderThumbSizeVar})`,
-    '@supports (writing-mode: sideways-lr)': {
-      writingMode: 'vertical-lr',
-      direction: 'rtl',
-    },
-    '@supports not (writing-mode: sideways-lr)': {
-      WebkitAppearance: 'slider-vertical',
-    },
   },
 });
 
@@ -280,7 +268,6 @@ export const useRangeSliderStyles_unstable = (state: RangeSliderState): RangeSli
   state.root.className = mergeClasses(
     rangeSliderClassNames.root,
     rootStyles.root,
-    isVertical ? rootStyles.focusIndicatorVertical : rootStyles.focusIndicatorHorizontal,
     rootStyles[state.size!],
     isVertical ? rootStyles.vertical : rootStyles.horizontal,
     state.disabled ? rootStyles.disabled : rootStyles.enabled,
@@ -298,6 +285,7 @@ export const useRangeSliderStyles_unstable = (state: RangeSliderState): RangeSli
     rangeSliderClassNames.startThumb,
     thumbStyles.thumbBase,
     isVertical ? thumbStyles.startVertical : thumbStyles.startHorizontal,
+    isVertical ? thumbStyles.focusIndicatorVertical : thumbStyles.focusIndicatorHorizontal,
     state.disabled && thumbStyles.disabled,
     state.startThumb.className,
   );
@@ -306,24 +294,21 @@ export const useRangeSliderStyles_unstable = (state: RangeSliderState): RangeSli
     rangeSliderClassNames.endThumb,
     thumbStyles.thumbBase,
     isVertical ? thumbStyles.endVertical : thumbStyles.endHorizontal,
+    isVertical ? thumbStyles.focusIndicatorVertical : thumbStyles.focusIndicatorHorizontal,
     state.disabled && thumbStyles.disabled,
     state.endThumb.className,
   );
 
   state.startInput.className = mergeClasses(
     rangeSliderClassNames.startInput,
-    inputStyles.base,
-    inputStyles.passive,
-    isVertical ? inputStyles.vertical : inputStyles.horizontal,
+    inputStyles.thumbInput,
     state.disabled && inputStyles.disabled,
     state.startInput.className,
   );
 
   state.endInput.className = mergeClasses(
     rangeSliderClassNames.endInput,
-    inputStyles.base,
-    inputStyles.interactive,
-    isVertical ? inputStyles.vertical : inputStyles.horizontal,
+    inputStyles.thumbInput,
     state.disabled && inputStyles.disabled,
     state.endInput.className,
   );

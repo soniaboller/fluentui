@@ -30,26 +30,24 @@ export type RangeSliderSlots = {
   rail: NonNullable<Slot<'div'>>;
 
   /**
-   * The lower draggable thumb used to select the minimum value of the range.
-   * This is the element containing `role = 'slider'`.
+   * Visual-only thumb that represents the minimum value. Focus and interaction come from the nested input.
    */
   startThumb: NonNullable<Slot<'div'>>;
 
   /**
-   * The upper draggable thumb used to select the maximum value of the range.
-   * This is the element containing `role = 'slider'`.
+   * Visual-only thumb that represents the maximum value. Focus and interaction come from the nested input.
    */
   endThumb: NonNullable<Slot<'div'>>;
 
   /**
-   * Hidden range input that mirrors the lower value for form submissions.
+   * Visually hidden `<input type="range">` that owns the lower value for accessibility and forms.
    */
   startInput: NonNullable<Slot<'input'>> & {
     orient?: 'horizontal' | 'vertical';
   };
 
   /**
-   * Hidden range input used for pointer/touch interactions and to mirror the upper value.
+   * Visually hidden `<input type="range">` that owns the upper value for accessibility and forms.
    */
   endInput: NonNullable<Slot<'input'>> & {
     orient?: 'horizontal' | 'vertical';
