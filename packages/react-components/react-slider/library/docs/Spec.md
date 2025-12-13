@@ -143,16 +143,6 @@ See [MIGRATION.md](./MIGRATION.md).
 
 Slider follows the [W3C slider pattern](https://www.w3.org/TR/wai-aria-1.1/#slider). Focus remains on the thumb, and all labeling comes from either `aria-label`, `aria-labelledby`, or surrounding `Label`/`Field` components.
 
-### Slider Open UI Research
-
-- <https://open-ui.org/components/slider.research.parts>
-- <https://open-ui.org/components/slider.research>
-
-### Slider Out of scope
-
-- Built-in marks or tick rendering.
-- Alternate origins such as center-out progress.
-
 ---
 
 ## RangeSlider Component
@@ -162,8 +152,6 @@ Slider follows the [W3C slider pattern](https://www.w3.org/TR/wai-aria-1.1/#slid
 RangeSlider enables users to select both a minimum and maximum value along the same rail. Two thumbs share the rail, and the currently selected span is highlighted between them. The component outputs `{ start, end }` objects for both uncontrolled (`defaultValue`) and controlled (`value`) usage.
 
 ### RangeSlider Variants
-
-RangeSlider supports the same appearance as Slider, plus:
 
 - **Size** (`size?: 'medium' | 'small'`): Medium is default, small tightens thumb and rail dimensions.
 - **Orientation** (`vertical?: boolean`): Vertical sliders place the minimum at the bottom and maximum at the top.
@@ -230,30 +218,14 @@ type RangeSliderOnChangeData = {
 
   ```html
   <div class="fui-RangeSlider">
-    <div class="fui-RangeSlider__rail"></div>
+    <div className="fui-RangeSlider__rail" />
     <div class="fui-RangeSlider__startThumb">
-      <input
-        class="fui-RangeSlider__startInput"
-        type="range"
-        min="0"
-        max="100"
-        step="1"
-        value="20"
-        aria-labelledby="label-123"
-        aria-valuetext="20"
-      />
+      <!-- thumb will implemented using pseudo elements -->
+      <input class="fui-RangeSlider__srOnlyInput" type="range" min="0" max="100" step="1" value="20" />
     </div>
     <div class="fui-RangeSlider__endThumb">
-      <input
-        class="fui-RangeSlider__endInput"
-        type="range"
-        min="0"
-        max="100"
-        step="1"
-        value="80"
-        aria-labelledby="label-123"
-        aria-valuetext="80"
-      />
+      <!-- thumb will implemented using pseudo elements -->
+      <input class="fui-RangeSlider__srOnlyInput" type="range" min="0" max="100" step="1" value="80" />
     </div>
   </div>
   ```
@@ -290,27 +262,18 @@ Additional logic:
 #### Screen readers
 
 - The native inputs stay in the DOM, retain their default `role="slider"`, and respond to keyboard/assistive tech directly.
-- Visual thumbs are `aria-hidden` and only reflect position. All labeling, `aria-valuetext`, and other semantics live on the inputs.
-- Developers connect shared labels via `aria-labelledby` on the `<RangeSlider>` (propagated to both inputs) or override each slot individually (`startInput={{ 'aria-label': 'Minimum' }}`).
+- When `vertical` is true, both native inputs expose `aria-orientation="vertical"` (per [ARIA slider](https://w3c.github.io/aria/#aria-orientation) and [APG multi-thumb guidance](https://www.w3.org/WAI/ARIA/apg/patterns/slider-multithumb/)).
 
 ### RangeSlider Accessibility
 
-| Slot         | Role     | ARIA Properties                                                                    |
-| ------------ | -------- | ---------------------------------------------------------------------------------- |
-| `root`       | `div`    | Container that can style `:focus-within`.                                          |
-| `startInput` | `slider` | Primary control for the lower value. Accepts `aria-label`, `aria-labelledby`, etc. |
-| `endInput`   | `slider` | Primary control for the upper value. Accepts `aria-*` labeling props.              |
-| `rail`       | none     | Visual only.                                                                       |
-| `startThumb` | none     | Decorative element marking the lower thumb. Marked `aria-hidden="true"`.           |
-| `endThumb`   | none     | Decorative element marking the upper thumb. Marked `aria-hidden="true"`.           |
+RangeSlider follows the [W3C slider pattern](https://www.w3.org/TR/wai-aria-1.1/#slider). Focus remains on the either thumb, and all labeling comes from either `aria-label`, `aria-labelledby`, or surrounding `Label`/`Field` components.
 
-Focus order: start input → end input → next focusable element. Visual thumbs mirror focus via `:focus-within`.
-
-### RangeSlider Open UI Research
-
-Range sliders share the same Open UI research references as Slider.
-
-### RangeSlider Out of scope
+### Out of scope
 
 - Built-in tick marks or labeled segments.
 - Non-linear ranges (logarithmic scales, custom easing).
+
+### Open UI Research
+
+- <https://open-ui.org/components/slider.research.parts>
+- <https://open-ui.org/components/slider.research>
