@@ -43,6 +43,12 @@ export type RangeSliderSlots = {
    * Visually hidden `<input type="range">` that owns the lower value for accessibility and forms.
    */
   startInput: NonNullable<Slot<'input'>> & {
+    /**
+     * Orient is a non standard attribute that allows for vertical orientation in Firefox. It is set internally
+     * when `vertical` is set to true.
+     * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/range#non_standard_attributes
+     * Webkit/Chromium support for vertical inputs is provided via -webkit-appearance css property
+     */
     orient?: 'horizontal' | 'vertical';
   };
 
@@ -50,12 +56,18 @@ export type RangeSliderSlots = {
    * Visually hidden `<input type="range">` that owns the upper value for accessibility and forms.
    */
   endInput: NonNullable<Slot<'input'>> & {
+    /**
+     * Orient is a non standard attribute that allows for vertical orientation in Firefox. It is set internally
+     * when `vertical` is set to true.
+     * https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/range#non_standard_attributes
+     * Webkit/Chromium support for vertical inputs is provided via -webkit-appearance css property
+     */
     orient?: 'horizontal' | 'vertical';
   };
 };
 
 export type RangeSliderProps = Omit<
-  ComponentProps<Partial<RangeSliderSlots>, 'endInput'>,
+  ComponentProps<Partial<RangeSliderSlots>, 'startInput' | 'endInput'>,
   'defaultValue' | 'onChange' | 'size' | 'value'
 > & {
   /**

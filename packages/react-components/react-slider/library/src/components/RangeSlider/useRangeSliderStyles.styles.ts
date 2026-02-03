@@ -251,6 +251,20 @@ const useInputStyles = makeStyles({
     opacity: 0,
     cursor: 'pointer',
   },
+  vertical: {
+    '-webkit-appearance': 'slider-vertical',
+    // Workaround to check if the browser supports `writing-mode: vertical-lr` for inputs and input[type=range] specifically.
+    // We check if the `writing-mode: sideways-lr` is supported as it's newer feature and it means
+    // that vertical controls should also support `writing-mode: vertical-lr`.
+    '@supports (writing-mode: sideways-lr)': {
+      writingMode: 'vertical-lr',
+      direction: 'rtl',
+    },
+    // Fallback for browsers that don't support `writing-mode: vertical-lr` for inputs
+    '@supports not (writing-mode: sideways-lr)': {
+      WebkitAppearance: 'slider-vertical',
+    },
+  },
   disabled: {
     cursor: 'default',
   },
@@ -263,13 +277,12 @@ export const useRangeSliderStyles_unstable = (state: RangeSliderState): RangeSli
   const railStyles = useRailStyles();
   const thumbStyles = useThumbStyles();
   const inputStyles = useInputStyles();
-  const isVertical = state.vertical;
 
   state.root.className = mergeClasses(
     rangeSliderClassNames.root,
     rootStyles.root,
     rootStyles[state.size!],
-    isVertical ? rootStyles.vertical : rootStyles.horizontal,
+    state.vertical ? rootStyles.vertical : rootStyles.horizontal,
     state.disabled ? rootStyles.disabled : rootStyles.enabled,
     state.root.className,
   );
@@ -277,15 +290,15 @@ export const useRangeSliderStyles_unstable = (state: RangeSliderState): RangeSli
   state.rail.className = mergeClasses(
     rangeSliderClassNames.rail,
     railStyles.rail,
-    isVertical ? railStyles.vertical : railStyles.horizontal,
+    state.vertical ? railStyles.vertical : railStyles.horizontal,
     state.rail.className,
   );
 
   state.startThumb.className = mergeClasses(
     rangeSliderClassNames.startThumb,
     thumbStyles.thumbBase,
-    isVertical ? thumbStyles.startVertical : thumbStyles.startHorizontal,
-    isVertical ? thumbStyles.focusIndicatorVertical : thumbStyles.focusIndicatorHorizontal,
+    state.vertical ? thumbStyles.startVertical : thumbStyles.startHorizontal,
+    state.vertical ? thumbStyles.focusIndicatorVertical : thumbStyles.focusIndicatorHorizontal,
     state.disabled && thumbStyles.disabled,
     state.startThumb.className,
   );
@@ -293,8 +306,8 @@ export const useRangeSliderStyles_unstable = (state: RangeSliderState): RangeSli
   state.endThumb.className = mergeClasses(
     rangeSliderClassNames.endThumb,
     thumbStyles.thumbBase,
-    isVertical ? thumbStyles.endVertical : thumbStyles.endHorizontal,
-    isVertical ? thumbStyles.focusIndicatorVertical : thumbStyles.focusIndicatorHorizontal,
+    state.vertical ? thumbStyles.endVertical : thumbStyles.endHorizontal,
+    state.vertical ? thumbStyles.focusIndicatorVertical : thumbStyles.focusIndicatorHorizontal,
     state.disabled && thumbStyles.disabled,
     state.endThumb.className,
   );
@@ -302,6 +315,7 @@ export const useRangeSliderStyles_unstable = (state: RangeSliderState): RangeSli
   state.startInput.className = mergeClasses(
     rangeSliderClassNames.startInput,
     inputStyles.thumbInput,
+    state.vertical && inputStyles.vertical,
     state.disabled && inputStyles.disabled,
     state.startInput.className,
   );
@@ -309,6 +323,7 @@ export const useRangeSliderStyles_unstable = (state: RangeSliderState): RangeSli
   state.endInput.className = mergeClasses(
     rangeSliderClassNames.endInput,
     inputStyles.thumbInput,
+    state.vertical && inputStyles.vertical,
     state.disabled && inputStyles.disabled,
     state.endInput.className,
   );

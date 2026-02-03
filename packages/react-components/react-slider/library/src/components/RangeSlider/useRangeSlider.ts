@@ -1,3 +1,5 @@
+'use client';
+
 import * as React from 'react';
 import { useFieldControlProps_unstable } from '@fluentui/react-field';
 import { getPartitionedNativeProps, slot, useId, useMergedRefs } from '@fluentui/react-utilities';
@@ -14,11 +16,8 @@ import type { RangeSliderProps, RangeSliderState } from './RangeSlider.types';
  * @param props - props from this instance of RangeSlider
  * @param ref - reference to root HTMLDivElement of RangeSlider
  */
-export const useRangeSlider_unstable = (
-  props: RangeSliderProps,
-  ref: React.Ref<HTMLInputElement>,
-): RangeSliderState => {
-  props = useFieldControlProps_unstable(props, { supportsLabelFor: false });
+export const useRangeSlider_unstable = (props: RangeSliderProps, ref: React.Ref<HTMLDivElement>): RangeSliderState => {
+  props = useFieldControlProps_unstable(props, { supportsLabelFor: true });
 
   const nativeProps = getPartitionedNativeProps({
     props,
@@ -45,15 +44,16 @@ export const useRangeSlider_unstable = (
       endInput: 'input',
     },
     root: slot.always(root, {
-      defaultProps: nativeProps.root,
+      defaultProps: { ...nativeProps.root, ref },
       elementType: 'div',
     }),
     rail: slot.always(rail, { elementType: 'div' }),
-    startThumb: slot.always(startThumb, { elementType: 'div' }),
-    endThumb: slot.always(endThumb, { elementType: 'div' }),
+    startThumb: slot.always(startThumb, { defaultProps: { role: 'presentation', tabIndex: -1 }, elementType: 'div' }),
+    endThumb: slot.always(endThumb, { defaultProps: { role: 'presentation', tabIndex: -1 }, elementType: 'div' }),
     startInput: slot.always(startInput, {
       defaultProps: {
         id: startInputId,
+        ...nativeProps.primary,
         type: 'range',
         orient: vertical ? 'vertical' : undefined,
       },
@@ -62,7 +62,6 @@ export const useRangeSlider_unstable = (
     endInput: slot.always(endInput, {
       defaultProps: {
         id: endInputId,
-        ref,
         ...nativeProps.primary,
         type: 'range',
         orient: vertical ? 'vertical' : undefined,

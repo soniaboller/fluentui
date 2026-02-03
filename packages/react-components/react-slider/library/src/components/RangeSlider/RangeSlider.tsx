@@ -8,7 +8,7 @@ import { useRangeSliderStyles_unstable } from './useRangeSliderStyles.styles';
 import type { RangeSliderProps } from './RangeSlider.types';
 
 /**
- * RangeSlider component - TODO: add more docs
+ * RangeSlider allows selecting a lower and upper value across the same rail.
  */
 export const RangeSlider: ForwardRefComponent<RangeSliderProps> = React.forwardRef((props, ref) => {
   const state = useRangeSlider_unstable(props, ref);
