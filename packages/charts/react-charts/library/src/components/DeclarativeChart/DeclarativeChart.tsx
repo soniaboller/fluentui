@@ -11,7 +11,7 @@ import {
   sanitizeJson,
 } from '@fluentui/chart-utilities';
 import type { GridProperties } from './PlotlySchemaAdapter';
-import { tokens } from '@fluentui/react-theme';
+import { tokens, typographyStyles } from '@fluentui/react-theme';
 import { ThemeContext_unstable as V9ThemeContext } from '@fluentui/react-shared-contexts';
 import { Theme, webLightTheme } from '@fluentui/tokens';
 import * as d3Color from 'd3-color';
@@ -32,14 +32,18 @@ import {
   transformPlotlyJsonToVBCProps,
   transformPlotlyJsonToChartTableProps,
   transformPlotlyJsonToScatterChartProps,
-  projectPolarToCartesian,
   getAllupLegendsProps,
   NON_PLOT_KEY_PREFIX,
   SINGLE_REPEAT,
   transformPlotlyJsonToFunnelChartProps,
   transformPlotlyJsonToGanttChartProps,
+  transformPlotlyJsonToAnnotationChartProps,
+  transformPlotlyJsonToPolarChartProps,
+  DEFAULT_POLAR_SUBPLOT,
 } from './PlotlySchemaAdapter';
+import { getChartTitleInlineStyles } from '../../utilities/index';
 import type { ColorwayType } from './PlotlyColorAdapter';
+import { AnnotationOnlyChart } from '../AnnotationOnlyChart/AnnotationOnlyChart';
 import { DonutChart } from '../DonutChart/index';
 import { VerticalStackedBarChart } from '../VerticalStackedBarChart/index';
 import { LineChart } from '../LineChart/index';
@@ -54,11 +58,14 @@ import { Chart, ImageExportOptions } from '../../types/index';
 import { ScatterChart } from '../ScatterChart/index';
 import { FunnelChart } from '../FunnelChart/FunnelChart';
 import { GanttChart } from '../GanttChart/index';
+import { PolarChart } from '../PolarChart/index';
 
 import { withResponsiveContainer } from '../ResponsiveContainer/withResponsiveContainer';
 import { ChartTable } from '../ChartTable/index';
-import { LegendsProps, Legends } from '../Legends/index';
+import { LegendsProps, Legends, LegendContainer } from '../Legends/index';
 import { JSXElement } from '@fluentui/react-utilities/src/index';
+import { resolveCSSVariables, useRtl } from '../../utilities/index';
+import { exportChartsAsImage } from '../../utilities/image-export-utils';
 
 const ResponsiveDonutChart = withResponsiveContainer(DonutChart);
 const ResponsiveVerticalStackedBarChart = withResponsiveContainer(VerticalStackedBarChart);
@@ -75,6 +82,7 @@ const ResponsiveChartTable = withResponsiveContainer(ChartTable);
 const ResponsiveGanttChart = withResponsiveContainer(GanttChart);
 // Removing responsive wrapper for FunnelChart as responsive container is not working with FunnelChart
 //const ResponsiveFunnelChart = withResponsiveContainer(FunnelChart);
+const ResponsivePolarChart = withResponsiveContainer(PolarChart);
 
 // Default x-axis key for grouping traces. Also applicable for PieData and SankeyData where x-axis is not defined.
 const DEFAULT_XAXIS = 'x';
@@ -110,7 +118,7 @@ export interface DeclarativeChartProps extends React.RefAttributes<HTMLDivElemen
    * Optional callback to access the IDeclarativeChart interface. Use this instead of ref for accessing
    * the public methods and properties of the component.
    */
-  componentRef?: React.RefObject<IDeclarativeChart | null>;
+  componentRef?: React.Ref<IDeclarativeChart>;
 
   /**
    * Optional prop to specify the colorway type of the chart.
@@ -179,6 +187,10 @@ const LineAreaPreTransformOp = (plotlyInput: PlotlySchema) => {
 };
 
 type ChartTypeMap = {
+  annotation: {
+    transformer: typeof transformPlotlyJsonToAnnotationChartProps;
+    renderer: typeof AnnotationOnlyChart;
+  } & PreTransformHooks;
   donut: {
     transformer: typeof transformPlotlyJsonToDonutProps;
     renderer: typeof ResponsiveDonutChart;
@@ -235,6 +247,10 @@ type ChartTypeMap = {
     transformer: typeof transformPlotlyJsonToFunnelChartProps;
     renderer: typeof FunnelChart;
   } & PreTransformHooks;
+  scatterpolar: {
+    transformer: typeof transformPlotlyJsonToPolarChartProps;
+    renderer: typeof ResponsivePolarChart;
+  } & PreTransformHooks;
   fallback: {
     transformer: typeof transformPlotlyJsonToVSBCProps;
     renderer: typeof ResponsiveVerticalStackedBarChart;
@@ -242,6 +258,10 @@ type ChartTypeMap = {
 };
 
 const chartMap: ChartTypeMap = {
+  annotation: {
+    transformer: transformPlotlyJsonToAnnotationChartProps,
+    renderer: AnnotationOnlyChart,
+  },
   // PieData category charts
   donut: {
     transformer: transformPlotlyJsonToDonutProps,
@@ -305,6 +325,10 @@ const chartMap: ChartTypeMap = {
     transformer: transformPlotlyJsonToFunnelChartProps,
     renderer: FunnelChart,
   },
+  scatterpolar: {
+    transformer: transformPlotlyJsonToPolarChartProps,
+    renderer: ResponsivePolarChart,
+  },
   fallback: {
     transformer: transformPlotlyJsonToVSBCProps,
     renderer: ResponsiveVerticalStackedBarChart,
@@ -331,7 +355,7 @@ const useIsDarkTheme = (): boolean => {
 export const DeclarativeChart: React.FunctionComponent<DeclarativeChartProps> = React.forwardRef<
   HTMLDivElement,
   DeclarativeChartProps
->((props, forwardedRef) => {
+>(({ colorwayType = 'default', ...props }, forwardedRef) => {
   const { plotlySchema } = sanitizeJson(props.chartSchema);
   const chart: OutputChartType = mapFluentChart(plotlySchema);
   if (!chart.isValid) {
@@ -356,8 +380,11 @@ export const DeclarativeChart: React.FunctionComponent<DeclarativeChartProps> = 
   let { selectedLegends } = plotlySchema;
   const colorMap = useColorMapping();
   const isDarkTheme = useIsDarkTheme();
-  const chartRef = React.useRef<Chart>(null);
+  const chartRefs = React.useRef<{ compRef: Chart | null; row: number; col: number }[]>([]);
   const isMultiPlot = React.useRef(false);
+  const legendsRef = React.useRef<LegendContainer>(null);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const isRTL = useRtl();
 
   if (!isArrayOrTypedArray(selectedLegends)) {
     selectedLegends = [];
@@ -385,36 +412,55 @@ export const DeclarativeChart: React.FunctionComponent<DeclarativeChartProps> = 
     selectedLegends: activeLegends,
   };
 
-  const commonProps = {
+  const interactiveCommonProps = {
     legendProps: multiSelectLegendProps,
-    componentRef: chartRef,
   };
 
   function createLegends(legendProps: LegendsProps): JSXElement {
     // eslint-disable-next-line react/jsx-no-bind
-    return <Legends {...legendProps} selectedLegends={activeLegends} onChange={onActiveLegendsChange} />;
+    return (
+      <Legends
+        {...legendProps}
+        selectedLegends={activeLegends}
+        onChange={onActiveLegendsChange}
+        legendRef={legendsRef}
+      />
+    );
   }
 
-  // TODO
-  const exportAsImage = React.useCallback((opts?: ImageExportOptions): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      if (isMultiPlot.current) {
-        return reject(Error('Exporting multi plot charts as image is not supported'));
-      }
-      if (!chartRef.current || typeof chartRef.current.toImage !== 'function') {
-        return reject(Error('Chart cannot be exported as image'));
+  const exportAsImage = React.useCallback(
+    async (opts?: ImageExportOptions) => {
+      if (!containerRef.current) {
+        throw new Error('Container reference is null');
       }
 
-      chartRef.current
-        .toImage({
-          background: tokens.colorNeutralBackground1,
-          scale: 5,
-          ...opts,
-        })
-        .then(resolve)
-        .catch(reject);
-    });
-  }, []);
+      const imgExpOpts = {
+        background: resolveCSSVariables(containerRef.current, tokens.colorNeutralBackground1),
+        scale: 5,
+        ...opts,
+      };
+
+      if (!isMultiPlot.current) {
+        if (!chartRefs.current[0]?.compRef?.toImage) {
+          throw new Error('Chart cannot be exported as image');
+        }
+
+        return chartRefs.current[0].compRef.toImage(imgExpOpts);
+      }
+
+      return exportChartsAsImage(
+        chartRefs.current.map(item => ({
+          container: item.compRef?.chartContainer,
+          row: item.row,
+          col: item.col,
+        })),
+        legendsRef.current?.toSVG,
+        isRTL,
+        imgExpOpts,
+      );
+    },
+    [isRTL],
+  );
 
   React.useImperativeHandle(
     props.componentRef,
@@ -424,38 +470,30 @@ export const DeclarativeChart: React.FunctionComponent<DeclarativeChartProps> = 
     [exportAsImage],
   );
 
-  if (chart.type === 'scatterpolar') {
-    const cartesianProjection = projectPolarToCartesian(plotlyInputWithValidData);
-    plotlyInputWithValidData.data = cartesianProjection.data;
-    plotlyInputWithValidData.layout = cartesianProjection.layout;
-    validTracesFilteredIndex.forEach((trace, index) => {
-      if (trace.type === 'scatterpolar') {
-        const mode = (plotlyInputWithValidData.data[index] as PlotData)?.mode ?? '';
-        if (mode.includes('line')) {
-          validTracesFilteredIndex[index].type = 'line';
-        } else if (mode.includes('markers') || mode === 'text') {
-          validTracesFilteredIndex[index].type = 'scatter';
-        } else {
-          validTracesFilteredIndex[index].type = 'line';
-        }
-      }
-    });
-  }
   const groupedTraces: Record<string, number[]> = {};
   let nonCartesianTraceCount = 0;
-  plotlyInputWithValidData.data.forEach((trace: Data, index: number) => {
-    let traceKey = '';
-    if (isNonPlotType(chart.validTracesInfo![index].type)) {
-      traceKey = `${NON_PLOT_KEY_PREFIX}${nonCartesianTraceCount + 1}`;
-      nonCartesianTraceCount++;
-    } else {
-      traceKey = (trace as PlotData).xaxis ?? DEFAULT_XAXIS;
-    }
-    if (!groupedTraces[traceKey]) {
-      groupedTraces[traceKey] = [];
-    }
-    groupedTraces[traceKey].push(index);
-  });
+
+  // For annotation-only charts, create a single group entry
+  if (chart.type === 'annotation') {
+    groupedTraces[DEFAULT_XAXIS] = [];
+  } else {
+    plotlyInputWithValidData.data.forEach((trace: Data, index: number) => {
+      let traceKey = '';
+      if (isNonPlotType(chart.validTracesInfo![index].type)) {
+        traceKey = `${NON_PLOT_KEY_PREFIX}${nonCartesianTraceCount + 1}`;
+        nonCartesianTraceCount++;
+      } else {
+        traceKey =
+          chart.validTracesInfo![index].type === 'scatterpolar'
+            ? (trace as { subplot?: string }).subplot ?? DEFAULT_POLAR_SUBPLOT
+            : (trace as PlotData).xaxis ?? DEFAULT_XAXIS;
+      }
+      if (!groupedTraces[traceKey]) {
+        groupedTraces[traceKey] = [];
+      }
+      groupedTraces[traceKey].push(index);
+    });
+  }
 
   isMultiPlot.current = Object.keys(groupedTraces).length > 1;
   const gridProperties: GridProperties = getGridProperties(
@@ -491,23 +529,38 @@ export const DeclarativeChart: React.FunctionComponent<DeclarativeChartProps> = 
   const allupLegendsProps = getAllupLegendsProps(
     plotlyInputWithValidData,
     colorMap,
-    props.colorwayType,
+    colorwayType,
     chart.validTracesInfo!,
     isDarkTheme,
   );
 
   type ChartType = keyof ChartTypeMap;
+
+  const titleObj = plotlyInputWithValidData.layout?.title;
+  const chartTitle = typeof titleObj === 'string' ? titleObj : titleObj?.text ?? '';
+  const titleFont = typeof titleObj === 'object' ? titleObj?.font : undefined;
+
+  const titleStyle: React.CSSProperties = {
+    ...typographyStyles.caption1,
+    color: tokens.colorNeutralForeground1,
+    textAlign: 'center',
+    marginBottom: tokens.spacingVerticalS,
+    ...getChartTitleInlineStyles(titleFont),
+  };
+
   // map through the grouped traces and render the appropriate chart
   return (
     <>
+      {isMultiPlot.current && chartTitle && <div style={titleStyle}>{chartTitle}</div>}
       <div
         style={{
           display: 'grid',
           gridTemplateRows: gridProperties.templateRows,
           gridTemplateColumns: gridProperties.templateColumns,
         }}
+        ref={containerRef}
       >
-        {Object.entries(groupedTraces).map(([xAxisKey, index]) => {
+        {Object.entries(groupedTraces).map(([xAxisKey, index], chartIdx) => {
           const plotlyInputForGroup: PlotlySchema = {
             ...plotlyInputWithValidData,
             data: index.map(idx => plotlyInputWithValidData.data[idx]),
@@ -515,7 +568,9 @@ export const DeclarativeChart: React.FunctionComponent<DeclarativeChartProps> = 
 
           const filteredTracesInfo = validTracesFilteredIndex.filter(trace => index.includes(trace.index));
           let chartType =
-            chart.type === 'fallback' || chart.type === 'groupedverticalbar' ? chart.type : filteredTracesInfo[0].type;
+            chart.type === 'fallback' || chart.type === 'groupedverticalbar'
+              ? chart.type
+              : filteredTracesInfo[0]?.type ?? chart.type;
 
           if (
             validTracesFilteredIndex.some(trace => trace.type === 'line') &&
@@ -533,14 +588,29 @@ export const DeclarativeChart: React.FunctionComponent<DeclarativeChartProps> = 
                 : plotlyInputForGroup;
               const cellProperties = gridProperties.layout[xAxisKey];
 
+              const resolvedCommonProps = (
+                chartType === 'annotation'
+                  ? {}
+                  : {
+                      ...interactiveCommonProps,
+                    }
+              ) as Partial<ReturnType<typeof transformer>>;
+
               return renderChart<ReturnType<typeof transformer>>(
                 renderer,
                 transformer,
-                [transformedInput, isMultiPlot.current, colorMap, props.colorwayType, isDarkTheme],
+                [transformedInput, isMultiPlot.current, colorMap, colorwayType, isDarkTheme],
                 {
-                  ...commonProps,
-                  xAxisAnnotation: cellProperties?.xAnnotation,
-                  yAxisAnnotation: cellProperties?.yAnnotation,
+                  ...resolvedCommonProps,
+                  ...(cellProperties?.xAnnotation && { xAxisAnnotation: cellProperties.xAnnotation }),
+                  ...(cellProperties?.yAnnotation && { yAxisAnnotation: cellProperties.yAnnotation }),
+                  componentRef: (ref: Chart | null) => {
+                    chartRefs.current[chartIdx] = {
+                      compRef: ref,
+                      row: cellProperties?.row ?? 1,
+                      col: cellProperties?.column ?? 1,
+                    };
+                  },
                 },
                 cellProperties?.row ?? 1,
                 cellProperties?.column ?? 1,
@@ -557,6 +627,3 @@ export const DeclarativeChart: React.FunctionComponent<DeclarativeChartProps> = 
   );
 });
 DeclarativeChart.displayName = 'DeclarativeChart';
-DeclarativeChart.defaultProps = {
-  colorwayType: 'default',
-};

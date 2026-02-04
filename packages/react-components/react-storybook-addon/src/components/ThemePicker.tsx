@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { IconButton, Icons, TooltipLinkList, WithTooltip } from '@storybook/components';
-import { useParameter } from '@storybook/manager-api';
+import { IconButton, TooltipLinkList, WithTooltip } from 'storybook/internal/components';
+import { ArrowDownIcon } from '@storybook/icons';
+import { useParameter } from 'storybook/manager-api';
 
 import type { JSXElement } from '@fluentui/react-utilities';
 import { ThemeIds, themes, defaultTheme } from '../theme';
@@ -69,9 +70,9 @@ export const ThemePicker = (): JSXElement => {
 
   return (
     <>
-      <WithTooltip placement="top" trigger="click" closeOnClick tooltip={renderTooltip}>
+      <WithTooltip placement="top" trigger="click" closeOnOutsideClick tooltip={renderTooltip}>
         <IconButton key={THEME_ID} title="Change Fluent theme" active={isActive}>
-          <Icons icon="arrowdown" />
+          <ArrowDownIcon />
           <span style={{ marginLeft: 5 }}>Theme: {selectedTheme?.label}</span>
         </IconButton>
       </WithTooltip>

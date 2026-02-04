@@ -43,7 +43,11 @@ const getLinkItems = (props: IPivotProps, pivotId: string): PivotLinkCollection 
 
   React.Children.forEach(React.Children.toArray(props.children), (child: React.ReactNode, index: number) => {
     if (isPivotItem(child)) {
-      const { linkText, ...pivotItemProps } = child.props;
+      const {
+        // eslint-disable-next-line @typescript-eslint/no-deprecated
+        linkText,
+        ...pivotItemProps
+      } = child.props;
       const itemKey = child.props.itemKey || index.toString();
       result.links.push({
         headerText: linkText,
@@ -82,6 +86,7 @@ export const PivotBase: React.FunctionComponent<IPivotProps> = React.forwardRef<
       overflowButtonAs,
     } = props;
 
+    // eslint-disable-next-line prefer-const
     let classNames: { [key in keyof IPivotStyles]: string };
     const nameProps = {
       'aria-label': props['aria-label'],

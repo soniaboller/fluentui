@@ -21,3 +21,5 @@ export * from './SankeyChart';
 export * from './FunnelChart';
 export * from './GanttChart';
 export * from './ChartTable';
+export * from './AnnotationOnlyChart';
+export * from './PolarChart';

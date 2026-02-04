@@ -19,18 +19,12 @@
     "storybook:docs": "yarn storybook --docs",
     "test": "jest --passWithNoTests"
   },
-  "devDependencies": {
-    "@fluentui/eslint-plugin": "*",
-    "@fluentui/scripts-storybook": "*",
-    "@fluentui/scripts-tasks": "*",
-    "@fluentui/storybook-llms-extractor": "*"
-  },
   "dependencies": {
     "@fluentui/react-charts": "*",
     "@fluentui/react-storybook-addon": "*",
     "@fluentui/react-storybook-addon-export-to-sandbox": "*",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
     "tslib": "^2.1.0"
   }
 }

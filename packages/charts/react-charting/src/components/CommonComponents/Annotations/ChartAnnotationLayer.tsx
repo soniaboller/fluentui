@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { classNamesFunction, css, getId } from '@fluentui/react/lib/Utilities';
-import { IChartAnnotation } from '../../../types/IChartAnnotation';
-import {
+import type { IChartAnnotation } from '../../../types/IChartAnnotation';
+import type {
   IAnnotationPoint,
   IChartAnnotationContext,
   IChartAnnotationLayerProps,
@@ -17,9 +17,8 @@ import {
   DEFAULT_CONNECTOR_STROKE_WIDTH,
   getDefaultConnectorStrokeColor,
   getStyles,
-  IChartAnnotationLayerStyleProps,
-  IChartAnnotationLayerStyles,
 } from './ChartAnnotationLayer.styles';
+import type { IChartAnnotationLayerStyleProps, IChartAnnotationLayerStyles } from './ChartAnnotationLayer.styles';
 
 const getClassNames = classNamesFunction<IChartAnnotationLayerStyleProps, IChartAnnotationLayerStyles>();
 
@@ -346,7 +345,7 @@ const resolveCoordinates = (
 };
 
 export const ChartAnnotationLayer: React.FC<IChartAnnotationLayerProps> = React.memo(props => {
-  const { annotations: annotationsProp, theme, context, className } = props;
+  const { annotations: annotationsProp, theme, context, className, hideDefaultStyles } = props;
 
   const classNames = getClassNames(getStyles, { theme, className });
   const idPrefix = React.useMemo(() => getId('chart-annotation'), []);
@@ -440,9 +439,16 @@ export const ChartAnnotationLayer: React.FC<IChartAnnotationLayerProps> = React.
 
     const containerStyle: React.CSSProperties = {
       maxWidth: layout?.maxWidth,
-      ...(hasCustomBackground && {
-        backgroundColor: applyOpacityToColor(baseBackgroundColor, backgroundOpacity),
-      }),
+      ...(hasCustomBackground
+        ? {
+            backgroundColor: applyOpacityToColor(baseBackgroundColor, backgroundOpacity),
+          }
+        : !hideDefaultStyles && {
+            backgroundColor: applyOpacityToColor(
+              theme.semanticColors.bodyBackground,
+              DEFAULT_ANNOTATION_BACKGROUND_OPACITY,
+            ),
+          }),
       borderColor: annotation.style?.borderColor,
       borderWidth: annotation.style?.borderWidth,
       borderStyle: annotation.style?.borderStyle ?? (annotation.style?.borderColor ? 'solid' : undefined),
@@ -457,6 +463,11 @@ export const ChartAnnotationLayer: React.FC<IChartAnnotationLayerProps> = React.
       fontWeight: annotation.style?.fontWeight,
       opacity: 1,
     };
+
+    if (typeof annotation.style?.rotation === 'number' && !Number.isNaN(annotation.style.rotation)) {
+      containerStyle.transform = `rotate(${annotation.style.rotation}deg)`;
+      containerStyle.transformOrigin = '50% 50%';
+    }
 
     const measurementSignature = createMeasurementSignature(
       annotationMarkupSignature,
@@ -530,11 +541,15 @@ export const ChartAnnotationLayer: React.FC<IChartAnnotationLayerProps> = React.
     }
 
     const measurementStyle: React.CSSProperties = {
+      position: 'absolute',
       left: topLeftX,
       top: topLeftY,
       pointerEvents: 'none',
+      visibility: 'hidden',
       ...containerStyle,
     };
+
+    const annotationClass = hideDefaultStyles ? classNames.annotationNoDefaults : classNames.annotation;
 
     if (!isMeasurementValid) {
       measurementElements.push(
@@ -548,7 +563,7 @@ export const ChartAnnotationLayer: React.FC<IChartAnnotationLayerProps> = React.
               }
             }
           }}
-          className={css(classNames.annotation, classNames.measurement, layout?.className, annotation.style?.className)}
+          className={css(annotationClass, classNames.measurement, layout?.className, annotation.style?.className)}
           style={measurementStyle}
           aria-hidden={true}
           data-annotation-key={key}
@@ -575,7 +590,7 @@ export const ChartAnnotationLayer: React.FC<IChartAnnotationLayerProps> = React.
         data-annotation-key={key}
       >
         <div
-          className={css(classNames.annotation, layout?.className, annotation.style?.className)}
+          className={css(annotationClass, layout?.className, annotation.style?.className)}
           style={containerStyle}
           data-annotation-key={key}
         >

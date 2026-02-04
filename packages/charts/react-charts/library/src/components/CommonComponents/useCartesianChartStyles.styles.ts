@@ -4,7 +4,7 @@ import { GriffelStyle, makeStyles, mergeClasses } from '@griffel/react';
 import { CartesianChartProps, CartesianChartStyles } from './CartesianChart.types';
 import { SlotClassNames } from '@fluentui/react-utilities/src/index';
 import { tokens, typographyStyles } from '@fluentui/react-theme';
-import { HighContrastSelector, useRtl } from '../../utilities/utilities';
+import { CARTESIAN_XAXIS_CLASSNAME, HighContrastSelector, useRtl } from '../../utilities/utilities';
 import { getAxisTitleStyle, getTooltipStyle } from '../../utilities/index';
 
 /**
@@ -13,8 +13,9 @@ import { getAxisTitleStyle, getTooltipStyle } from '../../utilities/index';
 export const cartesianchartClassNames: SlotClassNames<CartesianChartStyles> = {
   root: 'fui-cart__root',
   chartWrapper: 'fui-cart__chartWrapper',
+  plotContainer: 'fui-cart__plotContainer',
   axisTitle: 'fui-cart__axisTitle',
-  xAxis: 'fui-cart__xAxis',
+  xAxis: CARTESIAN_XAXIS_CLASSNAME,
   yAxis: 'fui-cart__yAxis',
   opacityChangeOnHover: 'fui-cart__opacityChangeOnHover',
   legendContainer: 'fui-cart__legendContainer',
@@ -26,6 +27,7 @@ export const cartesianchartClassNames: SlotClassNames<CartesianChartStyles> = {
   axisAnnotation: 'fui-cart__axisAnnotation',
   chartTitle: 'fui-cart__chartTitle',
   chart: 'fui-cart__chart',
+  annotationLayer: 'fui-cart__annotationLayer',
 };
 
 /**
@@ -40,9 +42,18 @@ const useStyles = makeStyles({
     flexDirection: 'column',
     overflow: 'hidden',
     textAlign: 'left',
+    position: 'relative',
   },
   chartWrapper: {
+    position: 'relative',
+  },
+  chartWrapperMinWidth: {
     overflow: 'auto',
+  },
+  plotContainer: {
+    position: 'relative',
+    width: '100%',
+    height: '100%',
   },
   axisTitle: getAxisTitleStyle() as GriffelStyle,
   axisAnnotation: getAxisTitleStyle() as GriffelStyle,
@@ -97,6 +108,9 @@ const useStyles = makeStyles({
       fill: 'Canvas',
     },
   },
+  annotationLayer: {
+    pointerEvents: 'none',
+  },
   tooltip: getTooltipStyle() as GriffelStyle,
 });
 /**
@@ -110,8 +124,13 @@ export const useCartesianChartStyles = (props: CartesianChartProps): CartesianCh
     root: mergeClasses(cartesianchartClassNames.root, baseStyles.root, props.styles?.root),
     chartWrapper: mergeClasses(
       cartesianchartClassNames.chartWrapper,
-      props.reflowProps?.mode === 'min-width' ? baseStyles.chartWrapper : '',
+      baseStyles.chartWrapper,
+      props.reflowProps?.mode === 'min-width' ? baseStyles.chartWrapperMinWidth : undefined,
       props.styles?.chartWrapper,
+    ),
+    plotContainer: mergeClasses(
+      cartesianchartClassNames.plotContainer,
+      baseStyles.plotContainer /*props.styles?.plotContainer*/,
     ),
     axisTitle: mergeClasses(cartesianchartClassNames.axisTitle, baseStyles.axisTitle /*props.styles?.axisTitle*/),
     xAxis: mergeClasses(cartesianchartClassNames.xAxis, baseStyles.xAxis /*props.styles?.xAxis*/),
@@ -129,6 +148,10 @@ export const useCartesianChartStyles = (props: CartesianChartProps): CartesianCh
       baseStyles.legendContainer /*props.styles?.legendContainer*/,
     ),
     svgTooltip: mergeClasses(cartesianchartClassNames.svgTooltip, baseStyles.svgTooltip, props.styles?.svgTooltip),
+    annotationLayer: mergeClasses(
+      cartesianchartClassNames.annotationLayer,
+      baseStyles.annotationLayer /*props.styles?.annotationLayer*/,
+    ),
     tooltip: mergeClasses(cartesianchartClassNames.tooltip, baseStyles.tooltip /*props.styles?.tooltip*/),
     axisAnnotation: mergeClasses(
       cartesianchartClassNames.axisAnnotation,

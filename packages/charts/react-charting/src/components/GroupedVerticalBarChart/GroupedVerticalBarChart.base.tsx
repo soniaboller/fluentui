@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { max as d3Max, min as d3Min } from 'd3-array';
-import { select as d3Select, pointer as d3Pointer } from 'd3-selection';
+import { pointer as d3Pointer } from 'd3-selection';
 import { scaleLinear as d3ScaleLinear, ScaleLinear, scaleBand as d3ScaleBand, ScaleBand } from 'd3-scale';
 import {
   classNamesFunction,
@@ -17,7 +17,6 @@ import {
   ChartTypes,
   IAxisData,
   getAccessibleDataObject,
-  tooltipOfAxislabels,
   XAxisTypes,
   getTypeOfAxis,
   formatScientificLimitWidth,
@@ -56,10 +55,11 @@ import {
   IYValueHover,
 } from '../../index';
 import { IChart, IImageExportOptions, IBarSeries, ILineSeries } from '../../types/index';
-import { toImage } from '../../utilities/image-export-utils';
+import { exportChartsAsImage } from '../../utilities/image-export-utils';
 import { ILegendContainer } from '../Legends/index';
 import { rgb } from 'd3-color';
 import type { JSXElement } from '@fluentui/utilities';
+import { isInvalidValue } from '@fluentui/chart-utilities';
 
 const COMPONENT_NAME = 'GROUPED VERTICAL BAR CHART';
 const getClassNames = classNamesFunction<IGroupedVerticalBarChartStyleProps, IGroupedVerticalBarChartStyles>();
@@ -111,12 +111,11 @@ export class GroupedVerticalBarChartBase
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _datasetForBars: any;
   private margins: IMargins;
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
+
   private _groupedVerticalBarGraph: JSXElement[];
   private _classNames: IProcessedStyleSet<IGroupedVerticalBarChartStyles>;
   private _yMax: number;
   private _calloutId: string;
-  private _tooltipId: string;
   private _xAxisType: XAxisTypes;
   private _isRtl: boolean = getRTL();
   private _calloutAnchorPoint: IGVBarChartSeriesPoint | null;
@@ -126,11 +125,11 @@ export class GroupedVerticalBarChartBase
   private _groupWidth: number;
   private _xAxisInnerPadding: number;
   private _xAxisOuterPadding: number;
-  private _cartesianChartRef: React.RefObject<IChart>;
-  private _legendsRef: React.RefObject<ILegendContainer>;
+  private _cartesianChartRef: React.RefObject<IChart | null>;
+  private _legendsRef: React.RefObject<ILegendContainer | null>;
   private _legendColorMap: Record<string, [string, string]> = {};
   private readonly Y_ORIGIN: number = 0;
-  private _rectRef: React.RefObject<SVGRectElement>;
+  private _rectRef: React.RefObject<SVGRectElement | null>;
   private _uniqDotId = getId('gvbc_dot_');
 
   public constructor(props: IGroupedVerticalBarChartProps) {
@@ -163,7 +162,6 @@ export class GroupedVerticalBarChartBase
       legendColor: 'Dont use this property. colour will pick from given data.',
     });
     this._calloutId = getId('callout');
-    this._tooltipId = getId('GVBCTooltipId_');
     this._emptyChartId = getId('_GVBC_empty');
     this._domainMargin = MIN_DOMAIN_MARGIN;
     this._cartesianChartRef = React.createRef();
@@ -181,19 +179,22 @@ export class GroupedVerticalBarChartBase
 
   public render(): React.ReactNode {
     const { barData, lineData } = this._prepareChartData();
-    this._xAxisType = getTypeOfAxis(barData[0].name, true) as XAxisTypes;
+    const firstXValue = barData[0]?.name ?? lineData[0]?.data[0]?.x;
+    this._xAxisType = isInvalidValue(firstXValue)
+      ? XAxisTypes.StringAxis
+      : (getTypeOfAxis(firstXValue, true) as XAxisTypes);
     const { barLegends, lineLegends, xAxisLabels, datasetForBars } = this._createSet(barData, lineData);
     this._barLegends = barLegends;
     this._lineLegends = lineLegends;
     this._xAxisLabels = xAxisLabels;
     this._datasetForBars = datasetForBars;
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
+
     const legendBars: JSXElement = this._getLegendData();
     this._adjustProps();
 
     // The maxOfYVal prop is only required for the primary y-axis, so yMax should be calculated
     // using only the data points associated with the primary y-axis.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const yMax = this._getMinMaxOfYAxis(this._datasetForBars).endValue;
     this._yMax = Math.max(yMax, this.props.yMaxValue || 0);
     this._classNames = getClassNames(this.props.styles!, {
@@ -288,7 +289,12 @@ export class GroupedVerticalBarChartBase
   }
 
   public toImage = (opts?: IImageExportOptions): Promise<string> => {
-    return toImage(this._cartesianChartRef.current?.chartContainer, this._legendsRef.current?.toSVG, this._isRtl, opts);
+    return exportChartsAsImage(
+      [{ container: this._cartesianChartRef.current?.chartContainer }],
+      this.props.hideLegend ? undefined : this._legendsRef.current?.toSVG,
+      this._isRtl,
+      opts,
+    );
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -315,7 +321,6 @@ export class GroupedVerticalBarChartBase
     xAxisType: XAxisTypes,
     barWidth: number,
     tickValues: Date[] | number[] | undefined,
-    shiftX: number,
   ) => {
     let domainNRangeValue: IDomainNRange;
     if (xAxisType === XAxisTypes.NumericAxis || xAxisType === XAxisTypes.DateAxis) {
@@ -347,7 +352,7 @@ export class GroupedVerticalBarChartBase
     this._groupWidth = calcRequiredWidth(this._barWidth, this._barLegends.length, X1_INNER_PADDING);
 
     const xScale1 = this._createX1Scale();
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
+
     const allGroupsBars: JSXElement[] = [];
     this._datasetForBars.forEach((singleSet: IGVSingleDataPoint) => {
       allGroupsBars.push(
@@ -429,11 +434,9 @@ export class GroupedVerticalBarChartBase
     yScaleSecondary: ScaleLinear<number, number> | undefined,
     containerHeight: number,
     xElement: SVGElement,
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
   ): JSXElement => {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const singleGroup: JSXElement[] = [];
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
+
     const barLabelsForGroup: JSXElement[] = [];
 
     // Get the actual legends present at this x-axis point
@@ -516,6 +519,22 @@ export class GroupedVerticalBarChartBase
             />,
           );
 
+          // Render individual bar label if provided
+          if (pointData.barLabel && isLegendActive) {
+            barLabelsForGroup.push(
+              <text
+                key={`${singleSet.indexNum}-${legendIndex}-${pointIndex}-label`}
+                x={xPoint + this._barWidth / 2}
+                y={pointData.data >= this.Y_ORIGIN ? yPoint - 6 : yPoint + height + 12}
+                textAnchor="middle"
+                className={this._classNames.barLabel}
+                aria-hidden={true}
+              >
+                {pointData.barLabel}
+              </text>,
+            );
+          }
+
           barTotalValue += pointData.data;
         });
         if (barTotalValue !== null && !this.props.hideLabels && this._barWidth >= 16 && isLegendActive) {
@@ -536,20 +555,6 @@ export class GroupedVerticalBarChartBase
         }
       }
     });
-    // Used to display tooltip at x axis labels.
-    if (!this.props.wrapXAxisLables && this.props.showXAxisLablesTooltip) {
-      const xAxisElement = d3Select(xElement).call(xScale0);
-      try {
-        document.getElementById(this._tooltipId) && document.getElementById(this._tooltipId)!.remove();
-        // eslint-disable-next-line no-empty
-      } catch (e) {}
-      const tooltipProps = {
-        tooltipCls: this._classNames.tooltip!,
-        id: this._tooltipId,
-        axis: xAxisElement,
-      };
-      xAxisElement && tooltipOfAxislabels(tooltipProps);
-    }
     return (
       <g
         key={singleSet.indexNum}
@@ -666,7 +671,6 @@ export class GroupedVerticalBarChartBase
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
   private _getLegendData = (): JSXElement => {
     const actions: ILegend[] = [];
 

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import type { Decorator, StoryFn } from '@storybook/react';
+import type { Decorator, StoryFn } from '@storybook/react-webpack5';
 import { FASTElement, customElement, html, attr } from '@microsoft/fast-element';
 import { teamsLightTheme, teamsDarkTheme, webLightTheme, webDarkTheme } from '@fluentui/tokens';
 import { setThemeFor } from '@fluentui/web-components';
@@ -59,7 +59,7 @@ function getStoryName(story: StoryFn) {
   return story.name?.replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
-export const getStoryVariant = (story: () => string | JSX.Element | JSX.Element[], variant: Variant) => {
+export const getStoryVariant = (story: () => string | React.ReactElement | React.ReactElement[], variant: Variant) => {
   return {
     ...story,
     render: story,

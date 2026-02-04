@@ -9,7 +9,7 @@ import { isConformant } from '../../common/isConformant';
 import type { ISpinButton } from './SpinButton.types';
 
 describe('SpinButton', () => {
-  let ref: React.RefObject<ISpinButton>;
+  let ref: React.RefObject<ISpinButton | null>;
 
   /**
    * Verify the value of the input field and related properties.
@@ -95,7 +95,7 @@ describe('SpinButton', () => {
   }
 
   beforeEach(() => {
-    ref = React.createRef<ISpinButton>();
+    ref = React.createRef<ISpinButton | null>();
     resetIds();
   });
 
@@ -689,7 +689,6 @@ describe('SpinButton', () => {
       const onChange = jest.fn();
       let keyCode: number | undefined;
       const onValidate = jest.fn((value: string, event?: React.SyntheticEvent) => {
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
         keyCode = (event as React.KeyboardEvent).which;
         return value;
       });

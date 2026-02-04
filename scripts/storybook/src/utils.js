@@ -22,7 +22,6 @@ const loadWorkspaceAddonDefaultOptions = { workspaceRoot };
  * ```js
  *  module.exports = {
  *    addons: [
-        '@storybook/addon-essentials',
         loadWorkspaceAddon('@fluentui/custom-storybook-addon',{ tsConfigPath: path.join(__dirname,'../tsconfig.base.json') }),
       ]
  *  }
@@ -256,7 +255,7 @@ function getPackageStoriesGlob(options) {
       return acc;
     }
 
-    const storiesGlob = '**/@(index.stories.@(ts|tsx)|*.stories.mdx)';
+    const storiesGlob = '**/@(index.stories.@(ts|tsx)|*.mdx)';
 
     // if defined package(project) has stories sibling project, that means we need to look for stories in sibling project as the original project doesn't have stories anymore
     // @see https://github.com/microsoft/fluentui/issues/30516
@@ -394,8 +393,7 @@ function processBabelLoaderOptions(loaderConfig) {
  */
 function overrideDefaultBabelLoader(options) {
   const { config } = options;
-  config.module = config.module ?? {};
-  config.module.rules = config.module.rules ?? [];
+  config.module = config.module ?? { rules: [] };
 
   const loader = getBabelLoader(/** @type {RuleSetRule[]}*/ (config.module.rules));
 

@@ -1,8 +1,35 @@
 # Change Log - @fluentui/react-motion-components-preview
 
-This log was last generated on Fri, 31 Oct 2025 16:22:05 GMT and should not be manually modified.
+This log was last generated on Thu, 22 Jan 2026 17:06:32 GMT and should not be manually modified.
 
 <!-- Start content -->
+
+## [0.15.0](https://github.com/microsoft/fluentui/tree/@fluentui/react-motion-components-preview_v0.15.0)
+
+Thu, 22 Jan 2026 17:06:32 GMT 
+[Compare changes](https://github.com/microsoft/fluentui/compare/@fluentui/react-motion-components-preview_v0.14.1..@fluentui/react-motion-components-preview_v0.15.0)
+
+### Minor changes
+
+- refactor(motion-components): improve parameter naming from 'from/to' to 'out/in' ([PR #35592](https://github.com/microsoft/fluentui/pull/35592) by robertpenner@microsoft.com)
+
+## [0.14.0](https://github.com/microsoft/fluentui/tree/@fluentui/react-motion-components-preview_v0.14.0)
+
+Thu, 06 Nov 2025 17:24:17 GMT 
+[Compare changes](https://github.com/microsoft/fluentui/compare/@fluentui/react-motion-components-preview_v0.13.0..@fluentui/react-motion-components-preview_v0.14.0)
+
+### Minor changes
+
+- feat(motion): Add Stagger choreography component ([PR #34705](https://github.com/microsoft/fluentui/pull/34705) by robertpenner@microsoft.com)
+
+## [0.13.0](https://github.com/microsoft/fluentui/tree/@fluentui/react-motion-components-preview_v0.13.0)
+
+Thu, 06 Nov 2025 15:01:23 GMT 
+[Compare changes](https://github.com/microsoft/fluentui/compare/@fluentui/react-motion-components-preview_v0.12.0..@fluentui/react-motion-components-preview_v0.13.0)
+
+### Minor changes
+
+- feat(motion): export standard motion atoms ([PR #35421](https://github.com/microsoft/fluentui/pull/35421) by robertpenner@microsoft.com)
 
 ## [0.12.0](https://github.com/microsoft/fluentui/tree/@fluentui/react-motion-components-preview_v0.12.0)
 

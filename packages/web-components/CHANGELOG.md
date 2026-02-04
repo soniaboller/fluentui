@@ -1,8 +1,80 @@
 # Change Log - @fluentui/web-components
 
-This log was last generated on Mon, 20 Oct 2025 04:08:15 GMT and should not be manually modified.
+This log was last generated on Wed, 04 Feb 2026 04:08:37 GMT and should not be manually modified.
 
 <!-- Start content -->
+
+## [3.0.0-rc.5](https://github.com/microsoft/fluentui/tree/@fluentui/web-components_v3.0.0-rc.5)
+
+Wed, 04 Feb 2026 04:08:37 GMT 
+[Compare changes](https://github.com/microsoft/fluentui/compare/@fluentui/web-components_v3.0.0-rc.4..@fluentui/web-components_v3.0.0-rc.5)
+
+### Changes
+
+- fix: remove extraneous closing parentheses in avatar CSS ([PR #35716](https://github.com/microsoft/fluentui/pull/35716) by 198982749+Copilot@users.noreply.github.com)
+
+## [3.0.0-rc.4](https://github.com/microsoft/fluentui/tree/@fluentui/web-components_v3.0.0-rc.4)
+
+Fri, 23 Jan 2026 04:07:04 GMT 
+[Compare changes](https://github.com/microsoft/fluentui/compare/@fluentui/web-components_v3.0.0-rc.3..@fluentui/web-components_v3.0.0-rc.4)
+
+### Changes
+
+- Update CAP DR tokens ([PR #35574](https://github.com/microsoft/fluentui/pull/35574) by jukapsia@microsoft.com)
+
+## [3.0.0-rc.3](https://github.com/microsoft/fluentui/tree/@fluentui/web-components_v3.0.0-rc.3)
+
+Wed, 14 Jan 2026 04:07:26 GMT 
+[Compare changes](https://github.com/microsoft/fluentui/compare/@fluentui/web-components_v3.0.0-rc.2..@fluentui/web-components_v3.0.0-rc.3)
+
+### Changes
+
+- chore: upgrade to storybook 9 ([PR #35459](https://github.com/microsoft/fluentui/pull/35459) by dmytrokirpa@microsoft.com)
+
+## [3.0.0-rc.2](https://github.com/microsoft/fluentui/tree/@fluentui/web-components_v3.0.0-rc.2)
+
+Mon, 12 Jan 2026 04:07:48 GMT 
+[Compare changes](https://github.com/microsoft/fluentui/compare/@fluentui/web-components_v3.0.0-rc.1..@fluentui/web-components_v3.0.0-rc.2)
+
+### Changes
+
+- fix: remove empty text nodes from avatar ([PR #33963](https://github.com/microsoft/fluentui/pull/33963) by 863023+radium-v@users.noreply.github.com)
+
+## [3.0.0-rc.1](https://github.com/microsoft/fluentui/tree/@fluentui/web-components_v3.0.0-rc.1)
+
+Wed, 26 Nov 2025 04:06:59 GMT 
+[Compare changes](https://github.com/microsoft/fluentui/compare/@fluentui/web-components_v3.0.0-beta.133..@fluentui/web-components_v3.0.0-rc.1)
+
+### Changes
+
+- move web components package from beta to release candidate ([PR #35499](https://github.com/microsoft/fluentui/pull/35499) by 13071055+chrisdholt@users.noreply.github.com)
+
+## [3.0.0-beta.133](https://github.com/microsoft/fluentui/tree/@fluentui/web-components_v3.0.0-beta.133)
+
+Wed, 12 Nov 2025 04:07:28 GMT 
+[Compare changes](https://github.com/microsoft/fluentui/compare/@fluentui/web-components_v3.0.0-beta.132..@fluentui/web-components_v3.0.0-beta.133)
+
+### Changes
+
+- fix: ensure required radio error message is announced by assistive technology ([PR #35468](https://github.com/microsoft/fluentui/pull/35468) by 13071055+chrisdholt@users.noreply.github.com)
+
+## [3.0.0-beta.132](https://github.com/microsoft/fluentui/tree/@fluentui/web-components_v3.0.0-beta.132)
+
+Fri, 07 Nov 2025 04:12:08 GMT 
+[Compare changes](https://github.com/microsoft/fluentui/compare/@fluentui/web-components_v3.0.0-beta.131..@fluentui/web-components_v3.0.0-beta.132)
+
+### Changes
+
+- fix: avoid global type leaks into production assets compilation ([PR #35434](https://github.com/microsoft/fluentui/pull/35434) by martinhochel@microsoft.com)
+
+## [3.0.0-beta.131](https://github.com/microsoft/fluentui/tree/@fluentui/web-components_v3.0.0-beta.131)
+
+Mon, 03 Nov 2025 04:07:38 GMT 
+[Compare changes](https://github.com/microsoft/fluentui/compare/@fluentui/web-components_v3.0.0-beta.130..@fluentui/web-components_v3.0.0-beta.131)
+
+### Changes
+
+- fix: hide dropdown indicator and support native collapse behavior on click ([PR #35439](https://github.com/microsoft/fluentui/pull/35439) by 13071055+chrisdholt@users.noreply.github.com)
 
 ## [3.0.0-beta.130](https://github.com/microsoft/fluentui/tree/@fluentui/web-components_v3.0.0-beta.130)
 

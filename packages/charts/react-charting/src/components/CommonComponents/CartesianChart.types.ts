@@ -5,6 +5,7 @@ import { IOverflowSetProps } from '@fluentui/react/lib/OverflowSet';
 import { IFocusZoneProps, FocusZoneDirection } from '@fluentui/react-focus';
 import { ICalloutProps } from '@fluentui/react/lib/Callout';
 import { ILegendsProps } from '../Legends/index';
+import { ITitleStyles } from '../../utilities/Common.styles';
 import {
   AxisCategoryOrder,
   AxisProps,
@@ -222,6 +223,11 @@ export interface ICartesianChartStyles {
  */
 export interface ICartesianChartProps {
   /**
+   * Title styles configuration for the chart title
+   */
+  titleStyles?: ITitleStyles;
+
+  /**
    * Below height used for resizing of the chart
    * Wrap chart in your container and send the updated height and width to these props.
    * These values decide wheather chart re render or not. Please check examples for reference
@@ -321,6 +327,11 @@ export interface ICartesianChartProps {
    * maximum data value point in y-axis
    */
   yMaxValue?: number;
+
+  /**
+   * minimum data value point in x-axis (for numeric x-axis)
+   */
+  xMinValue?: number;
 
   /**
    * maximum data value point in x-axis
@@ -561,13 +572,34 @@ export interface ICartesianChartProps {
    * Configuration for the x-axis.
    * Use this to control `tickStep`, `tick0`, etc.
    */
-  xAxis?: AxisProps;
+  xAxis?: AxisProps & {
+    /**
+     * Controls how x-axis tick labels are laid out.
+     *
+     * - `'auto'`: Tick labels are automatically wrapped, truncated, and staggered
+     *   across alternating levels based on the available space to prevent overlap.
+     *
+     * @default 'default'
+     */
+    tickLayout?: 'default' | 'auto';
+  };
 
   /**
    * Configuration for the y-axis.
    * Use this to control `tickStep`, `tick0`, etc.
    */
   yAxis?: AxisProps;
+
+  /**
+   *@default false
+   *Used for to elipse y axis labes and show tooltip on x axis labels
+   */
+  showYAxisLablesTooltip?: boolean;
+
+  /**
+   *@default false
+   *Used for showing complete y axis lables   */
+  showYAxisLables?: boolean;
 }
 
 export interface IYValueHover {
@@ -625,7 +657,7 @@ export interface IModifiedCartesianChartProps extends ICartesianChartProps {
   /**
    * Legends of the chart.
    */
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
+
   legendBars: JSXElement | null;
 
   /**
@@ -820,7 +852,6 @@ export interface IModifiedCartesianChartProps extends ICartesianChartProps {
     xAxisType: XAxisTypes,
     barWidth: number,
     tickValues: Date[] | number[] | string[] | undefined,
-    shiftX: number,
   ) => IDomainNRange;
 
   /**
@@ -830,6 +861,7 @@ export interface IModifiedCartesianChartProps extends ICartesianChartProps {
     yAxisParams: IYAxisParams,
     dataPoints: string[],
     isRtl: boolean,
+    axisData: IAxisData,
     barWidth: number | undefined,
     chartType?: ChartTypes,
   ) => ScaleBand<string>;

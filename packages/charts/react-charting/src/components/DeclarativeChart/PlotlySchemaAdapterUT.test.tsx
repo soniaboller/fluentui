@@ -8,13 +8,13 @@ import {
   transformPlotlyJsonToVBCProps,
   transformPlotlyJsonToAreaChartProps,
   transformPlotlyJsonToLineChartProps,
+  transformPlotlyJsonToAnnotationChartProps,
   transformPlotlyJsonToScatterChartProps,
   transformPlotlyJsonToHorizontalBarWithAxisProps,
   transformPlotlyJsonToHeatmapProps,
   transformPlotlyJsonToSankeyProps,
   transformPlotlyJsonToGaugeProps,
   transformPlotlyJsonToChartTableProps,
-  projectPolarToCartesian,
   findArrayAttributes,
   getAllupLegendsProps,
   isNonPlotType,
@@ -27,6 +27,7 @@ import {
   SINGLE_REPEAT,
 } from './PlotlySchemaAdapter';
 import { getColor, getSchemaColors } from './PlotlyColorAdapter';
+import type { PlotlySchema } from '@fluentui/chart-utilities';
 
 const date = new Date();
 const colorMap = new Map<string, string>();
@@ -153,19 +154,19 @@ describe('isMonthArray', () => {
 
 describe('correctYearMonth', () => {
   test('Should return dates array when input array contains months data', () => {
-    expect(correctYearMonth([10, 11, 1])).toStrictEqual(['10 01, 2024', '11 01, 2024', '1 01, 2025']);
+    expect(correctYearMonth([10, 11, 1])).toMatchSnapshot();
   });
 
   test('Should return error when input array contains invalid months', () => {
-    expect(correctYearMonth([10, 11, 16])).toStrictEqual(['10 01, 2025', '11 01, 2025', null]);
+    expect(correctYearMonth([10, 11, 16])).toMatchSnapshot();
   });
 
   test('Should return dates array when input array contains months data in MMM format', () => {
-    expect(correctYearMonth(['January', 'February'])).toStrictEqual(['January 01, 2025', 'February 01, 2025']);
+    expect(correctYearMonth(['January', 'February'])).toMatchSnapshot();
   });
 
   test('Should return dates array when input array contains months data in MM format', () => {
-    expect(correctYearMonth(['Jan', 'Feb'])).toStrictEqual(['Jan 01, 2025', 'Feb 01, 2025']);
+    expect(correctYearMonth(['Jan', 'Feb'])).toMatchSnapshot();
   });
 
   test('Should return dates array when input array is empty', () => {
@@ -454,6 +455,452 @@ describe('transform Plotly Json To chart Props', () => {
     } catch (e) {
       expect(e).toStrictEqual(TypeError("Cannot read properties of undefined (reading '0')"));
     }
+  });
+
+  describe('transformPlotlyJsonToAnnotationChartProps', () => {
+    const mockColorMap = { current: new Map<string, string>() };
+
+    beforeEach(() => {
+      mockColorMap.current.clear();
+    });
+
+    describe('Basic Transformation', () => {
+      test('transforms minimal Plotly schema to AnnotationOnlyChartProps', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {},
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result).toBeDefined();
+        expect(result.annotations).toEqual([]);
+        expect(result.chartTitle).toBeUndefined();
+      });
+
+      test('extracts chart title from layout', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            title: 'Test Chart Title',
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.chartTitle).toBe('Test Chart Title');
+      });
+
+      test('extracts chart title from layout.title.text', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            title: {
+              text: 'Nested Title',
+            },
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.chartTitle).toBe('Nested Title');
+      });
+
+      test('extracts description from layout.meta', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            meta: {
+              description: 'This is a test description',
+            },
+          } as unknown as PlotlySchema['layout'],
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.description).toBe('This is a test description');
+      });
+    });
+
+    describe('Annotation Mapping', () => {
+      test('preserves textangle as rotation on annotation style', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            annotations: [
+              {
+                text: 'Rotated label',
+                x: 0.5,
+                y: 0.5,
+                xref: 'x',
+                yref: 'y',
+                textangle: 45,
+                showarrow: false,
+              },
+            ],
+            xaxis: { range: [0, 1] },
+            yaxis: { range: [0, 1] },
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.annotations).toHaveLength(1);
+        expect(result.annotations?.[0].style?.rotation).toBe(45);
+      });
+    });
+
+    describe('Dimension Extraction', () => {
+      test('extracts width from layout', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            width: 800,
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.width).toBe(800);
+      });
+
+      test('extracts height from layout', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            height: 600,
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.height).toBe(600);
+      });
+
+      test('returns undefined for non-numeric dimensions', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            width: 'auto' as unknown as number,
+            height: '100%' as unknown as number,
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.width).toBeUndefined();
+        expect(result.height).toBeUndefined();
+      });
+    });
+
+    describe('Color Extraction', () => {
+      test('extracts paper_bgcolor from layout', () => {
+        const layout = {} as NonNullable<PlotlySchema['layout']>;
+        layout.paper_bgcolor = '#f0f0f0';
+
+        const input: PlotlySchema = {
+          data: [],
+          layout,
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.paperBackgroundColor).toBe('#f0f0f0');
+      });
+
+      test('extracts plot_bgcolor from layout', () => {
+        const layout = {} as NonNullable<PlotlySchema['layout']>;
+        layout.plot_bgcolor = 'rgba(255, 255, 255, 0.5)';
+
+        const input: PlotlySchema = {
+          data: [],
+          layout,
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.plotBackgroundColor).toBe('rgba(255, 255, 255, 0.5)');
+      });
+
+      test('returns undefined for non-string color values', () => {
+        const layout = {} as NonNullable<PlotlySchema['layout']>;
+        layout.paper_bgcolor = 123 as unknown as string;
+        layout.plot_bgcolor = null as unknown as string;
+
+        const input: PlotlySchema = {
+          data: [],
+          layout,
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.paperBackgroundColor).toBeUndefined();
+        expect(result.plotBackgroundColor).toBeUndefined();
+      });
+    });
+
+    describe('Font Extraction', () => {
+      test('extracts font color from layout', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            font: {
+              color: '#333333',
+            },
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.fontColor).toBe('#333333');
+      });
+
+      test('extracts font family from layout', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            font: {
+              family: 'Arial, sans-serif',
+            },
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.fontFamily).toBe('Arial, sans-serif');
+      });
+
+      test('handles missing font properties', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            font: {},
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.fontColor).toBeUndefined();
+        expect(result.fontFamily).toBeUndefined();
+      });
+
+      test('handles missing font object', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {},
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.fontColor).toBeUndefined();
+        expect(result.fontFamily).toBeUndefined();
+      });
+    });
+
+    describe('Margin Extraction', () => {
+      test('extracts margin from layout', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            margin: {
+              t: 10,
+              r: 20,
+              b: 30,
+              l: 40,
+            },
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.margin).toEqual({
+          t: 10,
+          r: 20,
+          b: 30,
+          l: 40,
+        });
+      });
+
+      test('handles partial margin values', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            margin: {
+              t: 15,
+              l: 25,
+            },
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.margin).toEqual({
+          t: 15,
+          l: 25,
+        });
+      });
+
+      test('handles missing margin', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {},
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.margin).toBeUndefined();
+      });
+    });
+
+    describe('Complete Transformation', () => {
+      test('transforms complete Plotly schema with all properties', () => {
+        const layout = {
+          title: 'Complete Test Chart',
+          width: 1000,
+          height: 800,
+          font: {
+            color: '#000000',
+            family: 'Segoe UI, sans-serif',
+          },
+          margin: {
+            t: 50,
+            r: 50,
+            b: 50,
+            l: 50,
+          },
+          meta: {
+            description: 'A complete test chart',
+          },
+        } as NonNullable<PlotlySchema['layout']>;
+
+        layout.paper_bgcolor = '#ffffff';
+        layout.plot_bgcolor = '#f5f5f5';
+
+        const input: PlotlySchema = {
+          data: [],
+          layout,
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result).toEqual({
+          annotations: [],
+          chartTitle: 'Complete Test Chart',
+          description: 'A complete test chart',
+          width: 1000,
+          height: 800,
+          paperBackgroundColor: '#ffffff',
+          plotBackgroundColor: '#f5f5f5',
+          fontColor: '#000000',
+          fontFamily: 'Segoe UI, sans-serif',
+          margin: {
+            t: 50,
+            r: 50,
+            b: 50,
+            l: 50,
+          },
+        });
+      });
+    });
+
+    describe('Multi-plot Handling', () => {
+      test('returns empty annotations array when isMultiPlot is true', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            annotations: [
+              {
+                text: 'Should be ignored',
+                x: 0.5,
+                y: 0.5,
+                xref: 'paper',
+                yref: 'paper',
+              },
+            ],
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, true, mockColorMap, 'default');
+
+        expect(result.annotations).toEqual([]);
+      });
+
+      test('processes annotations when isMultiPlot is false', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            annotations: [
+              {
+                text: 'Test Annotation',
+                x: 0.5,
+                y: 0.5,
+                xref: 'paper',
+                yref: 'paper',
+              },
+            ],
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.annotations.length).toBeGreaterThan(0);
+      });
+    });
+
+    describe('Edge Cases', () => {
+      test('handles empty layout', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {},
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result).toBeDefined();
+        expect(result.annotations).toEqual([]);
+      });
+
+      test('handles undefined layout properties', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            title: undefined,
+            width: undefined,
+            height: undefined,
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result.chartTitle).toBeUndefined();
+        expect(result.width).toBeUndefined();
+        expect(result.height).toBeUndefined();
+      });
+
+      test('handles null data array', () => {
+        const input: PlotlySchema = {
+          data: null as unknown as PlotlySchema['data'],
+          layout: {},
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default');
+
+        expect(result).toBeDefined();
+      });
+
+      test('ignores unused colorMap and colorwayType parameters', () => {
+        const input: PlotlySchema = {
+          data: [],
+          layout: {
+            title: 'Test',
+          },
+        };
+
+        const result = transformPlotlyJsonToAnnotationChartProps(input, false, mockColorMap, 'default', true);
+
+        expect(result.chartTitle).toBe('Test');
+      });
+    });
   });
 });
 
@@ -878,168 +1325,6 @@ describe('transformPlotlyJsonToChartTableProps', () => {
     );
     expect(result.headers).toHaveLength(2);
     expect(result.rows).toHaveLength(1);
-  });
-});
-
-describe('projectPolarToCartesian', () => {
-  test('Should convert polar coordinates to cartesian', () => {
-    const polarSchema = {
-      data: [
-        {
-          type: 'scatterpolar' as const,
-          r: [1, 2, 3],
-          theta: [0, 90, 180],
-        },
-      ],
-      layout: {},
-    };
-
-    const result = projectPolarToCartesian(polarSchema);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const seriesData = result.data[0] as any; // Type assertion for test purposes
-    expect(seriesData.x).toHaveLength(3);
-    expect(seriesData.y).toHaveLength(3);
-    // Normalized values: x = [1/6, 0/6, -3/6], y = [0/6, 2/6, 0/6]
-    expect(seriesData.x[0]).toBeCloseTo(1 / 6, 4); // ≈ 0.1667
-    expect(seriesData.y[0]).toBeCloseTo(0, 4);
-    expect(seriesData.x[1]).toBeCloseTo(0, 4);
-    expect(seriesData.y[1]).toBeCloseTo(2 / 6, 4); // ≈ 0.3333
-    expect(seriesData.x[2]).toBeCloseTo(-0.5, 4);
-    expect(seriesData.y[2]).toBeCloseTo(0, 4);
-  });
-
-  test('Should handle invalid polar data', () => {
-    const invalidSchema = {
-      data: [
-        {
-          type: 'scatterpolar' as const,
-          r: [1, null, NaN, Infinity],
-          theta: [0, 90, null, 270],
-        },
-      ],
-      layout: {},
-    };
-
-    const result = projectPolarToCartesian(invalidSchema);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const seriesData = result.data[0] as any; // Type assertion for test purposes
-    expect(seriesData.x).toHaveLength(1); // Only valid point
-    expect(seriesData.y).toHaveLength(1);
-  });
-
-  test('Should handle empty polar data', () => {
-    const emptySchema = {
-      data: [{ type: 'scatterpolar' as const, r: [], theta: [] }],
-      layout: {},
-    };
-
-    const result = projectPolarToCartesian(emptySchema);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const seriesData = result.data[0] as any; // Type assertion for test purposes
-    expect(seriesData.x).toHaveLength(0);
-    expect(seriesData.y).toHaveLength(0);
-  });
-
-  test('Should handle negative radius values', () => {
-    const negativeSchema = {
-      data: [
-        {
-          type: 'scatterpolar' as const,
-          r: [-1, -2, 1],
-          theta: [0, 90, 180],
-        },
-      ],
-      layout: {},
-    };
-
-    const result = projectPolarToCartesian(negativeSchema);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const seriesData = result.data[0] as any; // Type assertion for test purposes
-    expect(seriesData.x).toHaveLength(3);
-    expect(seriesData.y).toHaveLength(3);
-    // Correct normalized values: x = [-0.1, -0.2, -0.5], y = [0, 0, 0]
-    expect(seriesData.x[0]).toBeCloseTo(-0.1, 4);
-    expect(seriesData.x[1]).toBeCloseTo(-0.2, 4);
-    expect(seriesData.x[2]).toBeCloseTo(-0.5, 4);
-    expect(seriesData.y[0]).toBeCloseTo(0, 4);
-    expect(seriesData.y[1]).toBeCloseTo(0, 4);
-    expect(seriesData.y[2]).toBeCloseTo(0, 4);
-  });
-
-  test('Should handle very large angles', () => {
-    const largeAngleSchema = {
-      data: [
-        {
-          type: 'scatterpolar' as const,
-          r: [1, 1, 1],
-          theta: [0, 360, 720], // Full rotations
-        },
-      ],
-      layout: {},
-    };
-
-    const result = projectPolarToCartesian(largeAngleSchema);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const seriesData = result.data[0] as any; // Type assertion for test purposes
-    expect(seriesData.x).toHaveLength(3);
-    expect(seriesData.x[0]).toBeCloseTo(seriesData.x[1], 1); // 0° and 360° should be similar
-    expect(seriesData.x[0]).toBeCloseTo(seriesData.x[2], 1); // 0° and 720° should be similar
-  });
-
-  test('Should handle string values in arrays', () => {
-    const stringSchema = {
-      data: [
-        {
-          type: 'scatterpolar' as const,
-          r: ['1', '2', 'invalid'],
-          theta: ['0', '90', 'bad'],
-        },
-      ],
-      layout: {},
-    };
-
-    const result = projectPolarToCartesian(stringSchema);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const seriesData = result.data[0] as any; // Type assertion for test purposes
-    expect(seriesData.x.length).toBeGreaterThanOrEqual(0); // Should handle conversion gracefully
-    expect(seriesData.y.length).toBeGreaterThanOrEqual(0);
-  });
-
-  test('Should handle mismatched array lengths', () => {
-    const mismatchedSchema = {
-      data: [
-        {
-          type: 'scatterpolar' as const,
-          r: [1, 2, 3, 4, 5],
-          theta: [0, 90], // Shorter array
-        },
-      ],
-      layout: {},
-    };
-
-    const result = projectPolarToCartesian(mismatchedSchema);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const seriesData = result.data[0] as any; // Type assertion for test purposes
-    expect(seriesData.x).toHaveLength(2); // Should use minimum length
-    expect(seriesData.y).toHaveLength(2);
-  });
-
-  test('Should handle missing r or theta arrays', () => {
-    const missingRSchema = {
-      data: [
-        {
-          type: 'scatterpolar' as const,
-          theta: [0, 90, 180],
-        },
-      ],
-      layout: {},
-    };
-
-    const result = projectPolarToCartesian(missingRSchema);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const seriesData = result.data[0] as any; // Type assertion for test purposes
-    expect(seriesData.x).toHaveLength(0);
-    expect(seriesData.y).toHaveLength(0);
   });
 });
 

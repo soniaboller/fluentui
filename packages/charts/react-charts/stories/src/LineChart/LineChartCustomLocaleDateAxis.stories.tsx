@@ -137,7 +137,8 @@ export const LineChartCustomLocaleDateAxis = (props: LineChartProps): JSXElement
           max={1000}
           id="changeWidth_Basic"
           onChange={_onWidthChange}
-          aria-valuetext={`ChangeWidthSlider${width}`}
+          aria-label="Change Width"
+          aria-valuetext={`current value ${width}', Minimum 200 and Maximum 1000`}
         />
         <label htmlFor="changeHeight_Basic">Change Height:</label>
         <input
@@ -147,7 +148,8 @@ export const LineChartCustomLocaleDateAxis = (props: LineChartProps): JSXElement
           max={1000}
           id="changeHeight_Basic"
           onChange={_onHeightChange}
-          aria-valuetext={`ChangeHeightslider${height}`}
+          aria-label="Change Height"
+          aria-valuetext={`current value ${height}', Minimum 200 and Maximum 1000`}
         />
         <Switch
           label={
@@ -169,7 +171,6 @@ export const LineChartCustomLocaleDateAxis = (props: LineChartProps): JSXElement
           margins={margins}
           xAxisTickCount={10}
           allowMultipleShapesForPoints={allowMultipleShapes}
-          rotateXAxisLables={true}
           timeFormatLocale={customLocale as TimeLocaleDefinition}
           enablePerfOptimization={true}
         />

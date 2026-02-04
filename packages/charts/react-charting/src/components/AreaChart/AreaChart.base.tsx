@@ -1,15 +1,8 @@
 import * as React from 'react';
 import { max as d3Max, bisector } from 'd3-array';
 import { pointer } from 'd3-selection';
-import { select as d3Select } from 'd3-selection';
 import { area as d3Area, stack as d3Stack, curveMonotoneX as d3CurveBasis, line as d3Line } from 'd3-shape';
-import {
-  classNamesFunction,
-  getId,
-  getRTL,
-  initializeComponentRef,
-  memoizeFunction,
-} from '@fluentui/react/lib/Utilities';
+import { getId, getRTL, initializeComponentRef, memoizeFunction } from '@fluentui/react/lib/Utilities';
 import {
   IAccessibilityProps,
   CartesianChart,
@@ -20,8 +13,6 @@ import {
   ILineChartPoints,
   IChildProps,
   IMargins,
-  IAreaChartStyleProps,
-  IAreaChartStyles,
 } from '../../index';
 import { warnDeprecations } from '@fluentui/react/lib/Utilities';
 import { formatDateToLocaleString } from '@fluentui/chart-utilities';
@@ -31,7 +22,6 @@ import {
   ChartTypes,
   XAxisTypes,
   getTypeOfAxis,
-  tooltipOfAxislabels,
   getNextColor,
   getColorFromToken,
   findNumericMinMaxOfY,
@@ -49,11 +39,9 @@ import {
 import { ILegend, ILegendContainer, Legends } from '../Legends/index';
 import { DirectionalHint } from '@fluentui/react/lib/Callout';
 import { IChart, IImageExportOptions } from '../../types/index';
-import { toImage } from '../../utilities/image-export-utils';
+import { exportChartsAsImage } from '../../utilities/image-export-utils';
 import { ScaleLinear } from 'd3-scale';
 import type { JSXElement } from '@fluentui/utilities';
-
-const getClassNames = classNamesFunction<IAreaChartStyleProps, IAreaChartStyles>();
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const bisect = bisector((d: any) => d.x).left;
@@ -132,7 +120,7 @@ export class AreaChartBase extends React.Component<IAreaChartProps, IAreaChartSt
   private _uniqueCallOutID: string;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _data: any;
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
+
   private _chart: JSXElement[];
   private margins: IMargins;
   private _rectId: string;
@@ -140,15 +128,14 @@ export class AreaChartBase extends React.Component<IAreaChartProps, IAreaChartSt
   private _xAxisRectScale: any;
   // determines if the given area chart has multiple stacked bar charts
   private _isMultiStackChart: boolean;
-  private _tooltipId: string;
   private _highlightedCircleId: string;
   //enableComputationOptimization is used for optimized code to group data points by x value
   //from O(n^2) to O(n) using a map.
   private _enableComputationOptimization: boolean;
   private _firstRenderOptimization: boolean;
   private _emptyChartId: string;
-  private _cartesianChartRef: React.RefObject<IChart>;
-  private _legendsRef: React.RefObject<ILegendContainer>;
+  private _cartesianChartRef: React.RefObject<IChart | null>;
+  private _legendsRef: React.RefObject<ILegendContainer | null>;
   private _containsSecondaryYAxis = false;
   private _hasDuplicateXValues = false;
   private _hasMissingXValues = false;
@@ -181,7 +168,6 @@ export class AreaChartBase extends React.Component<IAreaChartProps, IAreaChartSt
     this._verticalLineId = getId('verticalLine_');
     this._circleId = getId('circle');
     this._rectId = getId('rectangle');
-    this._tooltipId = getId('AreaChartTooltipID');
     this._enableComputationOptimization = true;
     this._firstRenderOptimization = true;
     this._emptyChartId = getId('_AreaChart_empty');
@@ -205,7 +191,6 @@ export class AreaChartBase extends React.Component<IAreaChartProps, IAreaChartSt
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
   public render(): JSXElement {
     if (!this._isChartEmpty()) {
       const { lineChartData } = this.props.data;
@@ -219,7 +204,7 @@ export class AreaChartBase extends React.Component<IAreaChartProps, IAreaChartSt
       this._colors = colors;
       this._opacity = opacity;
       this._data = data.renderData;
-      // eslint-disable-next-line @typescript-eslint/no-deprecated
+
       const legends: JSXElement = this._getLegendData(points);
 
       const tickParams = {
@@ -264,7 +249,7 @@ export class AreaChartBase extends React.Component<IAreaChartProps, IAreaChartSt
           enableFirstRenderOptimization={this.props.enablePerfOptimization && this._firstRenderOptimization}
           ref={this._cartesianChartRef}
           /* eslint-disable react/jsx-no-bind */
-          // eslint-disable-next-line react/no-children-prop
+
           children={(props: IChildProps) => {
             this._xAxisRectScale = props.xScale;
             const ticks = this._xAxisRectScale.ticks();
@@ -305,7 +290,12 @@ export class AreaChartBase extends React.Component<IAreaChartProps, IAreaChartSt
   }
 
   public toImage = (opts?: IImageExportOptions): Promise<string> => {
-    return toImage(this._cartesianChartRef.current?.chartContainer, this._legendsRef.current?.toSVG, getRTL(), opts);
+    return exportChartsAsImage(
+      [{ container: this._cartesianChartRef.current?.chartContainer }],
+      this.props.hideLegend ? undefined : this._legendsRef.current?.toSVG,
+      getRTL(),
+      opts,
+    );
   };
 
   private _getMinMaxOfYAxis = (points: ILineChartPoints[], yAxisType: YAxisType, useSecondaryYScale: boolean) =>
@@ -734,7 +724,6 @@ export class AreaChartBase extends React.Component<IAreaChartProps, IAreaChartSt
     });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
   private _getLegendData = (points: ILineChartPoints[]): JSXElement => {
     const data = points;
     const actions: ILegend[] = [];
@@ -840,12 +829,10 @@ export class AreaChartBase extends React.Component<IAreaChartProps, IAreaChartSt
     yScalePrimary: ScaleLinear<number, number>,
     yScaleSecondary: ScaleLinear<number, number> | undefined,
     xElement: SVGElement,
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
   ): JSXElement[] => {
     const points = this._addDefaultColors(this.props.data.lineChartData);
     const { pointOptions, pointLineOptions } = this.props.data;
 
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const graph: JSXElement[] = [];
     let lineColor: string;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1025,30 +1012,6 @@ export class AreaChartBase extends React.Component<IAreaChartProps, IAreaChartSt
         {...getSecureProps(pointLineOptions)}
       />,
     );
-    const classNames = getClassNames(this.props.styles!, {
-      theme: this.props.theme!,
-    });
-    // Removing un wanted tooltip div from DOM, when prop not provided.
-    if (!this.props.showXAxisLablesTooltip) {
-      try {
-        document.getElementById(this._tooltipId) && document.getElementById(this._tooltipId)!.remove();
-        // eslint-disable-next-line no-empty
-      } catch (e) {}
-    }
-    // Used to display tooltip at x axis labels.
-    if (!this.props.wrapXAxisLables && this.props.showXAxisLablesTooltip) {
-      const xAxisElement = d3Select(xElement).call(xScale);
-      try {
-        document.getElementById(this._tooltipId) && document.getElementById(this._tooltipId)!.remove();
-        // eslint-disable-next-line no-empty
-      } catch (e) {}
-      const tooltipProps = {
-        tooltipCls: classNames.tooltip!,
-        id: this._tooltipId,
-        axis: xAxisElement,
-      };
-      xAxisElement && tooltipOfAxislabels(tooltipProps);
-    }
     return graph;
   };
 

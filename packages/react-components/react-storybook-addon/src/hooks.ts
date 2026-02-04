@@ -1,5 +1,5 @@
-import { useGlobals as useStorybookGlobals } from '@storybook/manager-api';
-import { Args as StorybookArgs, StoryContext as StorybookContext, Parameters } from '@storybook/react';
+import { useGlobals as useStorybookGlobals } from 'storybook/manager-api';
+import { Args as StorybookArgs, StoryContext as StorybookContext, Parameters } from '@storybook/react-webpack5';
 
 import { DIR_ID, STRICT_MODE_ID, THEME_ID } from './constants';
 import type { ThemeIds } from './theme';
@@ -49,7 +49,7 @@ type FluentDocsConfig =
           };
     };
 
-export function useGlobals(): [FluentGlobals, (newGlobals: FluentGlobals) => void] {
+export function useGlobals(): [FluentGlobals, (newGlobals: FluentGlobals) => void, FluentGlobals, FluentGlobals] {
   return useStorybookGlobals();
 }
 

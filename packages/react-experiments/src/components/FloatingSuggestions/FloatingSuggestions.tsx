@@ -24,7 +24,7 @@ export class FloatingSuggestions<TItem extends {}>
 {
   private root = React.createRef<HTMLDivElement>();
   private suggestionStore: SuggestionsStore<TItem>;
-  private suggestionsControl: React.RefObject<SuggestionsControl<TItem>> = React.createRef();
+  private suggestionsControl: React.RefObject<SuggestionsControl<TItem> | null> = React.createRef();
   private currentPromise: PromiseLike<TItem[]>;
   private isComponentMounted: boolean = false;
   private _async: Async;
@@ -145,7 +145,6 @@ export class FloatingSuggestions<TItem extends {}>
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
   public render(): JSXElement {
     const { className } = this.props;
     return (
@@ -190,7 +189,7 @@ export class FloatingSuggestions<TItem extends {}>
       });
     }
   }
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
+
   private _renderSuggestions(): JSXElement | null {
     // Express this as 2 separate statements instead of a single one, because `undefined` isn't filtered out of the type
     // when using `|| SuggestionsControl`

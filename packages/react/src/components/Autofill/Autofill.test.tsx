@@ -9,7 +9,7 @@ import type { IAutofill } from './index';
 jest.useFakeTimers();
 
 describe('Autofill', () => {
-  let autofillRef: React.RefObject<IAutofill>;
+  let autofillRef: React.RefObject<IAutofill | null>;
   let updatedText: string | undefined;
   let onInputValueChange: (text: string | undefined, composing?: boolean) => void;
 
@@ -19,7 +19,7 @@ describe('Autofill', () => {
   });
 
   beforeEach(() => {
-    autofillRef = React.createRef<IAutofill>();
+    autofillRef = React.createRef<IAutofill | null>();
     updatedText = undefined;
     onInputValueChange = (text: string | undefined) => {
       updatedText = text;
@@ -122,14 +122,13 @@ describe('Autofill', () => {
 
   it('value changes when updateValueInWillReceiveProps is passed in', () => {
     const propsString = 'Updated';
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
+
     const updateValueInWillReceiveProps = () => propsString;
 
     const { rerender } = render(
       <Autofill
         componentRef={autofillRef as IRefObject<IAutofill>}
         suggestedDisplayValue=""
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
         updateValueInWillReceiveProps={updateValueInWillReceiveProps}
       />,
     );
@@ -142,7 +141,6 @@ describe('Autofill', () => {
       <Autofill
         componentRef={autofillRef as IRefObject<IAutofill>}
         suggestedDisplayValue="hello"
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
         updateValueInWillReceiveProps={updateValueInWillReceiveProps}
       />,
     );
@@ -184,7 +182,6 @@ describe('Autofill', () => {
     render(
       <Autofill
         componentRef={autofillRef as IRefObject<IAutofill>}
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
         onInputChange={onInputChange}
         suggestedDisplayValue="he"
       />,
@@ -263,7 +260,6 @@ describe('Autofill', () => {
     render(
       <Autofill
         componentRef={autofillRef as IRefObject<IAutofill>}
-        // eslint-disable-next-line @typescript-eslint/no-deprecated
         onInputChange={onInputChange}
         suggestedDisplayValue="he"
       />,

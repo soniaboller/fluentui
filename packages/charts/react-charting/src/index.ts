@@ -162,10 +162,14 @@ export type { IGaugeChartProps, IGaugeChartSegment, IGaugeChartStyleProps, IGaug
 export { GaugeChart, GaugeChartVariant, GaugeValueFormat } from './GaugeChart';
 export type { DeclarativeChartProps, Schema, IDeclarativeChart } from './DeclarativeChart';
 export { DeclarativeChart } from './DeclarativeChart';
+export type { IAnnotationOnlyChartProps } from './AnnotationOnlyChart';
+export { AnnotationOnlyChart } from './AnnotationOnlyChart';
 export type { IResponsiveContainerProps, IResponsiveChildProps } from './ResponsiveContainer';
 export { ResponsiveContainer, withResponsiveContainer } from './ResponsiveContainer';
 export type { IScatterChartProps, IScatterChartStyleProps, IScatterChartStyles } from './ScatterChart';
 export type { IGanttChartProps, IGanttChartStyleProps, IGanttChartStyles } from './GanttChart';
 export { GanttChart } from './GanttChart';
+export type { IPolarChartProps, IPolarChartStyleProps, IPolarChartStyles, PolarAxisProps } from './PolarChart';
+export { PolarChart } from './PolarChart';
 
 import './version';

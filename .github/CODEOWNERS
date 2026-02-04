@@ -42,7 +42,6 @@
 /typings @microsoft/fluentui-react-build
 
 #### Root Build files
-/.eslintrc.* @microsoft/fluentui-react-build
 /.yarnrc @microsoft/fluentui-react-build
 /.gitattributes @microsoft/fluentui-react-build
 /.gitignore @microsoft/fluentui-react-build
@@ -180,7 +179,7 @@ packages/react-components/react-theme/library @microsoft/teams-prg
 packages/react-components/react-theme/stories @microsoft/teams-prg
 packages/react-components/react-utilities @microsoft/teams-prg @microsoft/cxe-prg
 packages/storybook @microsoft/cxe-prg @microsoft/teams-prg
-packages/style-utilities @dzearing @microsoft/cxe-red
+packages/style-utilities @bigbadcapers @microsoft/cxe-red
 packages/style-utilities/src/interfaces @phkuo @dzearing @microsoft/cxe-red
 packages/style-utilities/src/styles @phkuo @dzearing @microsoft/cxe-red
 packages/theme @dzearing @microsoft/cxe-red
@@ -194,6 +193,7 @@ common/_themeOverrides.scss @microsoft/cxe-red @phkuo
 common/_common.scss @microsoft/cxe-red @phkuo
 
 ## vNext packages
+packages/react-components/eslint-plugin-react-components @microsoft/fluentui-react-build @microsoft/cxe-prg
 packages/react-components/keyboard-keys @microsoft/teams-prg
 packages/react-components/react-accordion/library @microsoft/cxe-prg @marcosmoura
 packages/react-components/react-accordion/stories @microsoft/cxe-prg @marcosmoura
@@ -258,7 +258,7 @@ packages/react-components/react-toolbar/stories @microsoft/teams-prg @chpalac @l
 packages/react-components/react-portal-compat @microsoft/teams-prg
 packages/react-components/react-portal-compat-context @microsoft/teams-prg
 packages/react-components/react-theme-sass @microsoft/teams-prg
-packages/react-components/theme-designer @microsoft/cxe-red @ms-acalzaretto
+packages/react-components/theme-designer @microsoft/cxe-red
 packages/react-components/global-context @microsoft/teams-prg
 packages/react-components/babel-preset-global-context @microsoft/teams-prg
 packages/react-components/react-table/library @microsoft/teams-prg
@@ -280,8 +280,8 @@ packages/react-components/react-migration-v0-v9/library @microsoft/teams-prg
 packages/react-components/react-migration-v0-v9/stories @microsoft/teams-prg
 packages/react-components/react-datepicker-compat/library @microsoft/cxe-prg @ValentinaKozlova
 packages/react-components/react-datepicker-compat/stories @microsoft/cxe-prg @ValentinaKozlova
-packages/react-components/react-migration-v8-v9/library @microsoft/cxe-prg @geoffcoxmsft @dmytrokirpa
-packages/react-components/react-migration-v8-v9/stories @microsoft/cxe-prg @geoffcoxmsft @dmytrokirpa
+packages/react-components/react-migration-v8-v9/library @microsoft/cxe-prg @dmytrokirpa
+packages/react-components/react-migration-v8-v9/stories @microsoft/cxe-prg @dmytrokirpa
 packages/react-components/react-breadcrumb/library @microsoft/cxe-prg
 packages/react-components/react-breadcrumb/stories @microsoft/cxe-prg
 packages/react-components/react-drawer/library @microsoft/cxe-prg @marcosmoura
@@ -387,7 +387,7 @@ packages/react/src/components/WeeklyDayPicker @microsoft/cxe-red
 
 ## Theming and styling
 packages/react/src/utilities/ThemeProvider @microsoft/cxe-red @dzearing
-packages/fluent2-theme @microsoft/cxe-red @geoffcoxmsft
+packages/fluent2-theme @microsoft/cxe-red 
 ## Experiments
 packages/react-experiments @microsoft/cxe-red
 packages/react-experiments/src/components/Signals @ThomasMichon
@@ -399,8 +399,9 @@ packages/react-experiments/src/components/TileList @ThomasMichon
 **/just.config.ts @microsoft/fluentui-react-build
 **/jest.config.js @microsoft/fluentui-react-build
 **/webpack.*.js @microsoft/fluentui-react-build
-**/.eslintrc.js @microsoft/fluentui-react-build
-**/.eslintrc.json @microsoft/fluentui-react-build
+**/eslint.config.js @microsoft/fluentui-react-build
+**/eslint.config.cjs @microsoft/fluentui-react-build
+**/eslint.config.mjs @microsoft/fluentui-react-build
 **/tsconfig.json @microsoft/fluentui-react-build
 **/tsconfig.lib.json @microsoft/fluentui-react-build
 **/tsconfig.spec.json @microsoft/fluentui-react-build
@@ -408,6 +409,8 @@ packages/react-experiments/src/components/TileList @ThomasMichon
 **/api-extractor.json @microsoft/fluentui-react-build
 **/api-extractor.unstable.json @microsoft/fluentui-react-build
 **/.swcrc @microsoft/fluentui-react-build
+**/docs/Spec.md @microsoft/cxe-prg
+**/docs/SPEC.md @microsoft/cxe-prg
 
 ## Docs
 /rfcs/ @microsoft/cxe-red @microsoft/cxe-prg @microsoft/teams-prg

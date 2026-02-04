@@ -58,9 +58,7 @@ export const MicroFeedbackView: IMicroFeedbackComponent['view'] = props => {
     },
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
   const renderFollowup = (followUp: IMicroFeedbackQuestion, targetRef: HTMLDivElement | null): JSXElement => {
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
     const onRenderCalloutItem = (item: string, index: number | undefined): JSXElement => {
       const listOption = (): void => {
         onCalloutDismiss();
@@ -130,24 +128,28 @@ export const MicroFeedbackView: IMicroFeedbackComponent['view'] = props => {
     <Slots.root>
       <Slots.iconContainer horizontal>
         {children}
-        <div ref={likeRef}>
+        {withSlots(
+          'div',
+          { ref: likeRef },
           <IconButton
             menuIconProps={{ iconName: likeIcon }}
             title={likeIconTitle}
             ariaLabel={likeIconAriaLabel}
             // eslint-disable-next-line react/jsx-no-bind
             onClick={likeVoteClick}
-          />
-        </div>
-        <div ref={dislikeRef}>
+          />,
+        )}
+        {withSlots(
+          'div',
+          { ref: dislikeRef },
           <IconButton
             menuIconProps={{ iconName: dislikeIcon }}
             title={dislikeIconTitle}
             ariaLabel={dislikeIconAriaLabel}
             // eslint-disable-next-line react/jsx-no-bind
             onClick={dislikeVoteClick}
-          />
-        </div>
+          />,
+        )}
       </Slots.iconContainer>
       {likeQuestion && !hideLikeCallout && renderFollowup(likeQuestion, likeRef.current)}
       {dislikeQuestion && !hideDislikeCallout && renderFollowup(dislikeQuestion, dislikeRef.current)}

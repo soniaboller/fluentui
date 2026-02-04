@@ -32,6 +32,8 @@ import {
   truncateString,
   tooltipOfAxislabels,
   DEFAULT_WRAP_WIDTH,
+  getChartTitleInlineStyles,
+  autoLayoutXAxisLabels,
 } from '../../utilities/index';
 import { LegendShape, Shape } from '../Legends/index';
 import { SVGTooltipText, ISVGTooltipTextProps } from '../../utilities/SVGTooltipText';
@@ -44,13 +46,11 @@ const getClassNames = classNamesFunction<ICartesianChartStyleProps, ICartesianCh
 const ChartHoverCard = React.lazy(() =>
   import('../../utilities/ChartHoverCard/ChartHoverCard').then(module => ({ default: module.ChartHoverCard })),
 );
-const chartTypesWithStringYAxis = [
-  ChartTypes.HorizontalBarChartWithAxis,
-  ChartTypes.HeatMapChart,
-  ChartTypes.VerticalStackedBarChart,
-  ChartTypes.GanttChart,
-  ChartTypes.ScatterChart,
-];
+const HORIZONTAL_MARGIN_FOR_YAXIS_TITLE = 24;
+const VERTICAL_MARGIN_FOR_XAXIS_TITLE = 20;
+const AXIS_TITLE_PADDING = 8;
+const DEFAULT_MARGIN_WITH_TICKS = 40;
+const DEFAULT_MARGIN_NO_TICKS = 20;
 
 export interface ICartesianChartState {
   containerWidth: number;
@@ -82,8 +82,7 @@ export class CartesianChartBase
   private idForDefaultTabbableElement: string;
   private _reqID: number;
   private _isRtl: boolean = getRTL();
-  private _tickValues: (string | number)[];
-  private titleMargin: number;
+  private _tickLabels: string[];
   private _isFirstRender: boolean = true;
   /* Used for when WrapXAxisLabels props appeared.
    * To display the total word (space separated words), Need to have more space than usual.
@@ -92,6 +91,7 @@ export class CartesianChartBase
    * Defalut value is 0. And this values calculted when 'wrapXAxisLables' or 'showXAxisLablesTooltip' is true.
    */
   private _removalValueForTextTuncate: number = 0;
+  private _yAxisTickText: string[] = [];
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _xScale: any;
@@ -108,70 +108,13 @@ export class CartesianChartBase
       startFromX: 0,
     };
     this.idForGraph = getId('chart_');
-    this.titleMargin = 8;
     this.idForDefaultTabbableElement = getId('defaultTabbableElement_');
     this._tooltipId = getId('tooltip_');
-    /**
-     * In RTL mode, Only graph will be rendered left/right. We need to provide left and right margins manually.
-     * So that, in RTL, left margins becomes right margins and viceversa.
-     * As graph needs to be drawn perfecty, these values consider as default values.
-     * Same margins using for all other cartesian charts. Can be accessible through 'getMargins' call back method.
-     */
-    this.margins = {
-      top: this.props.margins?.top ?? 20,
-      bottom: this.props.margins?.bottom ?? 35,
-      right: this._isRtl
-        ? this.props.margins?.left ?? 40
-        : this.props.margins?.right ?? this.props?.secondaryYScaleOptions
-        ? 40
-        : 20,
-      left: this._isRtl
-        ? this.props.margins?.right ?? this.props?.secondaryYScaleOptions
-          ? 40
-          : 20
-        : this.props.margins?.left ?? 40,
-    };
-    const TITLE_MARGIN_HORIZONTAL = 24;
-    const TITLE_MARGIN_VERTICAL = 20;
-    if (this.props.xAxisTitle !== undefined && this.props.xAxisTitle !== '') {
-      this.margins.bottom! = this.props.margins?.bottom ?? this.margins.bottom! + TITLE_MARGIN_VERTICAL;
-    }
-    if (this.props.yAxisTitle !== undefined && this.props.yAxisTitle !== '') {
-      this.margins.left! = this._isRtl
-        ? this.props.margins?.right ?? this.props?.secondaryYAxistitle
-          ? this.margins.right! + 2 * TITLE_MARGIN_HORIZONTAL
-          : this.margins.right! + TITLE_MARGIN_HORIZONTAL
-        : this.props.margins?.left ?? this.margins.left! + TITLE_MARGIN_HORIZONTAL;
-      this.margins.right! = this._isRtl
-        ? this.props.margins?.left ?? this.margins.left! + TITLE_MARGIN_HORIZONTAL
-        : this.props.margins?.right ?? this.props?.secondaryYAxistitle
-        ? this.margins.right! + 2 * TITLE_MARGIN_HORIZONTAL
-        : this.margins.right! + TITLE_MARGIN_HORIZONTAL;
-    }
-    if (this.props.xAxisAnnotation !== undefined && this.props.xAxisAnnotation !== '') {
-      this.margins.top! = this.props.margins?.top ?? this.margins.top! + TITLE_MARGIN_VERTICAL;
-    }
-    if (
-      this.props.yAxisAnnotation !== undefined &&
-      this.props.yAxisAnnotation !== '' &&
-      (this.props.secondaryYAxistitle === undefined || this.props.secondaryYAxistitle === '')
-    ) {
-      if (this._isRtl) {
-        this.margins.left! = this.props.margins?.right ?? this.margins.right! + TITLE_MARGIN_HORIZONTAL;
-      } else {
-        this.margins.right! = this.props.margins?.right ?? this.margins.right! + TITLE_MARGIN_HORIZONTAL;
-      }
-    }
   }
 
   public componentDidMount(): void {
     this._fitParentContainer();
-    if (
-      chartTypesWithStringYAxis.includes(this.props.chartType) &&
-      this.props.showYAxisLables &&
-      this.yAxisElement &&
-      this.props.yAxisType === YAxisType.StringAxis
-    ) {
+    if (this.props.showYAxisLables) {
       const maxYAxisLabelLength = this.calculateMaxYAxisLabelLength(this._classNames.yAxis!);
       if (this.state.startFromX !== maxYAxisLabelLength) {
         this.setState({
@@ -196,12 +139,7 @@ export class CartesianChartBase
     if (prevProps.height !== this.props.height || prevProps.width !== this.props.width) {
       this._fitParentContainer();
     }
-    if (
-      chartTypesWithStringYAxis.includes(this.props.chartType) &&
-      this.props.showYAxisLables &&
-      this.yAxisElement &&
-      this.props.yAxisType === YAxisType.StringAxis
-    ) {
+    if (this.props.showYAxisLables) {
       const maxYAxisLabelLength = this.calculateMaxYAxisLabelLength(this._classNames.yAxis!);
       if (this.state.startFromX !== maxYAxisLabelLength) {
         this.setState({
@@ -230,12 +168,11 @@ export class CartesianChartBase
     };
 
     return calculateLongestLabelWidth(
-      this.props.stringDatasetForYAxisDomain!.map(label => formatTickLabel(label)),
+      this._yAxisTickText.map(label => formatTickLabel(label)),
       `.${className} text`,
     );
   };
 
-  // eslint-disable-next-line @typescript-eslint/no-deprecated
   public render(): JSXElement {
     const {
       calloutProps,
@@ -253,17 +190,9 @@ export class CartesianChartBase
       this._fitParentContainer();
     }
 
-    const margin = { ...this.margins };
-    // Note: This check is unnecessary since startFromX is only set for charts with string y-axis.
-    if (chartTypesWithStringYAxis.includes(this.props.chartType)) {
-      if (!this._isRtl) {
-        margin.left! += this.state.startFromX;
-      } else {
-        margin.right! += this.state.startFromX;
-      }
-    }
+    this.margins = this._calcMargins();
     // Callback for margins to the chart
-    this.props.getmargins && this.props.getmargins(margin);
+    this.props.getmargins && this.props.getmargins(this.margins);
 
     this._classNames = getClassNames(this.props.styles!, {
       theme: this.props.theme!,
@@ -274,7 +203,6 @@ export class CartesianChartBase
       enableReflow: this.props.enableReflow,
     });
 
-    // eslint-disable-next-line @typescript-eslint/no-deprecated
     let callout: JSXElement | null = null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -298,8 +226,6 @@ export class CartesianChartBase
           this.props.xAxisType,
           this.props.barwidth!,
           this.props.tickValues!,
-          // This is only used for Horizontal Bar Chart with Axis for y as string axis
-          this.state.startFromX,
         ),
         // FIXME: In XAxisParams, containerHeight is used by HBWA to generate vertical gridlines.
         // Since the x-axis in HBWA is numeric, it typically doesn't require transformation.
@@ -318,8 +244,11 @@ export class CartesianChartBase
         xAxisInnerPadding: this.props.xAxisInnerPadding,
         xAxisOuterPadding: this.props.xAxisOuterPadding,
         containerWidth: this.state.containerWidth,
-        hideTickOverlap: this.props.hideTickOverlap,
+        hideTickOverlap:
+          this.props.rotateXAxisLables || this.props.xAxis?.tickLayout === 'auto' ? false : this.props.hideTickOverlap,
         calcMaxLabelWidth: this._calcMaxLabelWidthWithTransform,
+        xMinValue: this.props.xMinValue,
+        xMaxValue: this.props.xMaxValue,
         ...this.props.xAxis,
       };
 
@@ -331,10 +260,11 @@ export class CartesianChartBase
        */
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       let xScale: any;
-      let tickValues: (string | number)[];
+      let tickValues: number[] | Date[] | string[];
+      let tickLabels: string[];
       switch (this.props.xAxisType!) {
         case XAxisTypes.NumericAxis:
-          ({ xScale, tickValues } = createNumericXAxis(
+          ({ xScale, tickValues, tickLabels } = createNumericXAxis(
             XAxisParams,
             this.props.tickParams!,
             this.props.chartType,
@@ -343,7 +273,7 @@ export class CartesianChartBase
           ));
           break;
         case XAxisTypes.DateAxis:
-          ({ xScale, tickValues } = createDateXAxis(
+          ({ xScale, tickValues, tickLabels } = createDateXAxis(
             XAxisParams,
             this.props.tickParams!,
             culture,
@@ -355,7 +285,7 @@ export class CartesianChartBase
           ));
           break;
         case XAxisTypes.StringAxis:
-          ({ xScale, tickValues } = createStringXAxis(
+          ({ xScale, tickValues, tickLabels } = createStringXAxis(
             XAxisParams,
             this.props.tickParams!,
             this.props.datasetForXAxisDomain!,
@@ -363,7 +293,7 @@ export class CartesianChartBase
           ));
           break;
         default:
-          ({ xScale, tickValues } = createNumericXAxis(
+          ({ xScale, tickValues, tickLabels } = createNumericXAxis(
             XAxisParams,
             this.props.tickParams!,
             this.props.chartType,
@@ -372,9 +302,20 @@ export class CartesianChartBase
           ));
       }
       this._xScale = xScale;
-      this._tickValues = tickValues;
+      this._tickLabels = tickLabels;
 
-      this._transformXAxisLabels();
+      if (this.props.xAxis?.tickLayout === 'auto') {
+        this._removalValueForTextTuncate = autoLayoutXAxisLabels(
+          tickValues,
+          tickLabels,
+          xScale,
+          this.xAxisElement,
+          this.state.containerWidth,
+          this.chartContainer,
+        );
+      } else {
+        this._transformXAxisLabels();
+      }
 
       const YAxisParams = {
         margins: this.props.getYDomainMargins ? this.props.getYDomainMargins(this.state.containerHeight) : this.margins,
@@ -402,12 +343,13 @@ export class CartesianChartBase
        * 2. To draw the graph.
        * For area/line chart using same scales. For other charts, creating their own scales to draw the graph.
        */
-      const axisData: IAxisData = { yAxisDomainValues: [] };
+      const axisData: IAxisData = { yAxisDomainValues: [], yAxisTickText: [] };
       if (this.props.yAxisType && this.props.yAxisType === YAxisType.StringAxis) {
         yScalePrimary = this.props.createStringYAxis(
           YAxisParams,
           this.props.stringDatasetForYAxisDomain!,
           this._isRtl,
+          axisData,
           this.props.barwidth,
           this.props.chartType,
         );
@@ -454,47 +396,49 @@ export class CartesianChartBase
           this.props.yScaleType,
         );
       }
+      this._yAxisTickText = axisData.yAxisTickText;
+      this.props.getAxisData && this.props.getAxisData(axisData);
 
-      if (chartTypesWithStringYAxis.includes(this.props.chartType) && this.props.yAxisType === YAxisType.StringAxis) {
-        // Removing un wanted tooltip div from DOM, when prop not provided, for proper cleanup
-        // of unwanted DOM elements, to prevent flacky behaviour in tooltips , that might occur
-        // in creating tooltips when tooltips are enabled( as we try to recreate a tspan with this._tooltipId)
-        if (!this.props.showYAxisLablesTooltip) {
-          try {
-            document.getElementById(this._tooltipId) && document.getElementById(this._tooltipId)!.remove();
-            //eslint-disable-next-line no-empty
-          } catch (e) {}
-        }
-        // Used to display tooltip at y axis labels.
-        if (this.props.showYAxisLablesTooltip) {
-          // To create y axis tick values by if specified truncating the rest of the text
-          // and showing elipsis or showing the whole string,
-          yScalePrimary &&
-            // Note: This function should be invoked within the showYAxisLablesTooltip check,
-            // as its sole purpose is to truncate labels that exceed the noOfCharsToTruncate limit.
-            createYAxisLabels(
-              this.yAxisElement,
-              yScalePrimary,
-              this.props.noOfCharsToTruncate || 4,
-              this.props.showYAxisLablesTooltip || false,
-              this._isRtl,
-            );
+      // Removing previously created tooltips.
+      try {
+        // eslint-disable-next-line @nx/workspace-no-restricted-globals
+        document.getElementById(this._tooltipId) && document.getElementById(this._tooltipId)!.remove();
+        // eslint-disable-next-line no-empty
+      } catch (e) {}
+      // Used to display tooltip at x axis labels.
+      if (this.props.showXAxisLablesTooltip || this.props.xAxis?.tickLayout === 'auto') {
+        const xAxisElement = this.xAxisElement ? d3Select(this.xAxisElement).call(xScale) : null;
+        const tooltipProps = {
+          tooltipCls: this._classNames.tooltip!,
+          id: this._tooltipId,
+          axis: xAxisElement,
+          container: this.chartContainer,
+        };
+        xAxisElement && tooltipOfAxislabels(tooltipProps);
+      }
+      // Used to display tooltip at y axis labels.
+      if (this.props.showYAxisLablesTooltip) {
+        // To create y axis tick values by if specified truncating the rest of the text
+        // and showing elipsis or showing the whole string,
+        yScalePrimary &&
+          createYAxisLabels(
+            this.yAxisElement,
+            yScalePrimary,
+            this.props.noOfCharsToTruncate || 4,
+            this.props.showYAxisLablesTooltip || false,
+            this._isRtl,
+          );
 
-          const yAxisElement = d3Select(this.yAxisElement).call(yScalePrimary);
-          try {
-            document.getElementById(this._tooltipId) && document.getElementById(this._tooltipId)!.remove();
-            //eslint-disable-next-line no-empty
-          } catch (e) {}
-          const ytooltipProps = {
-            tooltipCls: this._classNames.tooltip!,
-            id: this._tooltipId,
-            axis: yAxisElement,
-          };
-          yAxisElement && tooltipOfAxislabels(ytooltipProps);
-        }
+        const yAxisElement = this.yAxisElement ? d3Select(this.yAxisElement).call(yScalePrimary) : null;
+        const ytooltipProps = {
+          tooltipCls: this._classNames.tooltip!,
+          id: this._tooltipId,
+          axis: yAxisElement,
+          container: this.chartContainer,
+        };
+        yAxisElement && tooltipOfAxislabels(ytooltipProps);
       }
 
-      this.props.getAxisData && this.props.getAxisData(axisData);
       // Callback function for chart, returns axis
       this._getData(xScale, yScalePrimary, yScaleSecondary);
 
@@ -515,15 +459,14 @@ export class CartesianChartBase
       height: this.state.containerHeight,
     };
 
-    const startFromX = this.state.startFromX || 0;
-    const plotWidth = Math.max(0, svgDimensions.width - this.margins.left! - this.margins.right! - startFromX);
+    const plotWidth = Math.max(0, svgDimensions.width - this.margins.left! - this.margins.right!);
     const plotHeight = Math.max(
       0,
       svgDimensions.height - this.margins.top! - this.margins.bottom! - this._removalValueForTextTuncate,
     );
 
     const plotRect = {
-      x: this._isRtl ? this.margins.left! : this.margins.left! + startFromX,
+      x: this.margins.left!,
       y: this.margins.top!,
       width: plotWidth,
       height: plotHeight,
@@ -551,14 +494,20 @@ export class CartesianChartBase
       focusDirection = FocusZoneDirection.horizontal;
     }
 
-    const xAxisTitleMaximumAllowedWidth =
-      svgDimensions.width - this.margins.left! - this.margins.right! - this.state.startFromX!;
-    const yAxisTitleMaximumAllowedHeight =
+    const xAxisTitleMaxWidth = svgDimensions.width - this.margins.left! - this.margins.right! - AXIS_TITLE_PADDING * 2;
+    const yAxisTitleMaxHeight =
       svgDimensions.height -
       this.margins.bottom! -
       this.margins.top! -
       this._removalValueForTextTuncate -
-      this.titleMargin;
+      AXIS_TITLE_PADDING * 2;
+    const yAxisTitleCenterY = this.margins.top! + AXIS_TITLE_PADDING + yAxisTitleMaxHeight / 2;
+    const yAxisTitleCenterX = this._isRtl
+      ? svgDimensions.width - AXIS_TITLE_PADDING
+      : HORIZONTAL_MARGIN_FOR_YAXIS_TITLE - AXIS_TITLE_PADDING;
+    const secondaryYAxisTitleCenterX = this._isRtl
+      ? HORIZONTAL_MARGIN_FOR_YAXIS_TITLE - AXIS_TITLE_PADDING
+      : svgDimensions.width - AXIS_TITLE_PADDING;
 
     const commonSvgToolTipProps: ISVGTooltipTextProps = {
       wrapContent,
@@ -590,7 +539,9 @@ export class CartesianChartBase
       <div
         id={this.idForGraph}
         className={this._classNames.root}
-        ref={(rootElem: HTMLDivElement) => (this.chartContainer = rootElem)}
+        ref={(rootElem: HTMLDivElement) => {
+          this.chartContainer = rootElem;
+        }}
         onMouseLeave={this._onChartLeave}
       >
         {!this._isFirstRender && <div id={this.idForDefaultTabbableElement} />}
@@ -625,39 +576,75 @@ export class CartesianChartBase
               <SVGTooltipText
                 content={this.props.xAxisTitle}
                 textProps={{
-                  x: this.margins.left! + this.state.startFromX + xAxisTitleMaximumAllowedWidth / 2,
-                  y: svgDimensions.height - this.titleMargin,
+                  x: this.margins.left! + AXIS_TITLE_PADDING + xAxisTitleMaxWidth / 2,
+                  y: svgDimensions.height - AXIS_TITLE_PADDING,
                   className: this._classNames.axisTitle!,
                   textAnchor: 'middle',
                   'aria-hidden': true,
                 }}
-                maxWidth={xAxisTitleMaximumAllowedWidth}
+                maxWidth={xAxisTitleMaxWidth}
                 {...commonSvgToolTipProps}
               />
             )}
-            {this.props.xAxisAnnotation !== undefined && this.props.xAxisAnnotation !== '' && (
-              <SVGTooltipText
-                content={this.props.xAxisAnnotation}
-                textProps={{
-                  x: this.margins.left! + this.state.startFromX + xAxisTitleMaximumAllowedWidth / 2,
-                  y: this.titleMargin + 3,
-                  className: this._classNames.axisAnnotation!,
-                  textAnchor: 'middle',
-                  'aria-hidden': true,
-                }}
-                maxWidth={xAxisTitleMaximumAllowedWidth}
-                {...commonSvgToolTipProps}
-              />
-            )}
+            {this.props.xAxisAnnotation !== undefined &&
+              this.props.xAxisAnnotation !== '' &&
+              (() => {
+                const { titleFont, titleXAnchor, titleYAnchor, titlePad } = this.props.titleStyles ?? {};
+                const fontSize = typeof titleFont?.size === 'number' ? titleFont.size : 13;
+                const padL = titlePad?.l ?? 0;
+                const padR = titlePad?.r ?? 0;
+                const padT = titlePad?.t ?? 0;
+                const padB = titlePad?.b ?? 0;
+
+                const xPos =
+                  (titleXAnchor === 'left'
+                    ? this.margins.left! + AXIS_TITLE_PADDING
+                    : titleXAnchor === 'right'
+                    ? this.margins.left! + AXIS_TITLE_PADDING + xAxisTitleMaxWidth
+                    : this.margins.left! + AXIS_TITLE_PADDING + xAxisTitleMaxWidth / 2) +
+                  padL -
+                  padR;
+
+                const yPos =
+                  Math.max(fontSize + AXIS_TITLE_PADDING, VERTICAL_MARGIN_FOR_XAXIS_TITLE - AXIS_TITLE_PADDING) +
+                  padT -
+                  padB;
+
+                const textAnchor = titleXAnchor === 'left' ? 'start' : titleXAnchor === 'right' ? 'end' : 'middle';
+
+                const dominantBaseline =
+                  titleYAnchor === 'top'
+                    ? 'hanging'
+                    : titleYAnchor === 'bottom'
+                    ? 'alphabetic'
+                    : titleYAnchor === 'middle'
+                    ? 'central'
+                    : 'auto';
+
+                return (
+                  <SVGTooltipText
+                    content={this.props.xAxisAnnotation}
+                    textProps={{
+                      x: xPos,
+                      y: yPos,
+                      className: this._classNames.axisAnnotation!,
+                      textAnchor,
+                      dominantBaseline,
+                      'aria-hidden': true,
+                      style: getChartTitleInlineStyles(titleFont),
+                    }}
+                    maxWidth={xAxisTitleMaxWidth}
+                    {...commonSvgToolTipProps}
+                  />
+                );
+              })()}
             <g
               ref={(e: SVGSVGElement | null) => {
                 this.yAxisElement = e;
               }}
               id={`yAxisGElement${this.idForGraph}`}
               transform={`translate(${
-                this._isRtl
-                  ? svgDimensions.width - this.margins.right! - this.state.startFromX
-                  : this.margins.left! + this.state.startFromX
+                this._isRtl ? svgDimensions.width - this.margins.right! : this.margins.left!
               }, 0)`}
               className={this._classNames.yAxis}
             />
@@ -669,9 +656,7 @@ export class CartesianChartBase
                   }}
                   id={`yAxisGElementSecondary${this.idForGraph}`}
                   transform={`translate(${
-                    this._isRtl
-                      ? this.margins.left! + this.state.startFromX
-                      : svgDimensions.width - this.margins.right! - this.state.startFromX
+                    this._isRtl ? this.margins.left! : svgDimensions.width - this.margins.right!
                   }, 0)`}
                   className={this._classNames.yAxis}
                 />
@@ -679,21 +664,14 @@ export class CartesianChartBase
                   <SVGTooltipText
                     content={this.props.secondaryYAxistitle}
                     textProps={{
-                      x: (yAxisTitleMaximumAllowedHeight - this.margins.bottom!) / 2 + this._removalValueForTextTuncate,
-                      y: this._isRtl
-                        ? this.state.startFromX - this.titleMargin
-                        : svgDimensions.width - this.margins.right!,
+                      x: secondaryYAxisTitleCenterX,
+                      y: yAxisTitleCenterY,
                       textAnchor: 'middle',
-                      transform: `translate(${
-                        this._isRtl
-                          ? this.margins.right! / 2 - this.titleMargin
-                          : this.margins.right! / 2 + this.titleMargin
-                      },
-                   ${svgDimensions.height - this.margins.bottom! - this.margins.top! - this.titleMargin})rotate(-90)`,
+                      transform: `rotate(-90, ${secondaryYAxisTitleCenterX}, ${yAxisTitleCenterY})`,
                       className: this._classNames.axisTitle!,
                       'aria-hidden': true,
                     }}
-                    maxWidth={yAxisTitleMaximumAllowedHeight}
+                    maxWidth={yAxisTitleMaxHeight}
                     {...commonSvgToolTipProps}
                   />
                 )}
@@ -704,17 +682,14 @@ export class CartesianChartBase
               <SVGTooltipText
                 content={this.props.yAxisTitle}
                 textProps={{
-                  x: (yAxisTitleMaximumAllowedHeight - this.margins.bottom!) / 2 + this._removalValueForTextTuncate,
-                  y: this._isRtl
-                    ? svgDimensions.width - this.margins.right! / 2 + this.titleMargin
-                    : this.margins.left! / 2 - this.titleMargin,
+                  x: yAxisTitleCenterX,
+                  y: yAxisTitleCenterY,
                   textAnchor: 'middle',
-                  transform: `translate(0,
-                   ${svgDimensions.height - this.margins.bottom! - this.margins.top! - this.titleMargin})rotate(-90)`,
+                  transform: `rotate(-90, ${yAxisTitleCenterX}, ${yAxisTitleCenterY})`,
                   className: this._classNames.axisTitle!,
                   'aria-hidden': true,
                 }}
-                maxWidth={yAxisTitleMaximumAllowedHeight}
+                maxWidth={yAxisTitleMaxHeight}
                 {...commonSvgToolTipProps}
               />
             )}
@@ -724,21 +699,14 @@ export class CartesianChartBase
                 <SVGTooltipText
                   content={this.props.yAxisAnnotation}
                   textProps={{
-                    x: (yAxisTitleMaximumAllowedHeight - this.margins.bottom!) / 2 + this._removalValueForTextTuncate,
-                    y: this._isRtl
-                      ? this.state.startFromX - this.titleMargin
-                      : svgDimensions.width - this.margins.right!,
+                    x: secondaryYAxisTitleCenterX,
+                    y: yAxisTitleCenterY,
                     textAnchor: 'middle',
-                    transform: `translate(${
-                      this._isRtl
-                        ? this.margins.right! / 2 - this.titleMargin
-                        : this.margins.right! / 2 + this.titleMargin
-                    },
-                   ${svgDimensions.height - this.margins.bottom! - this.margins.top! - this.titleMargin})rotate(-90)`,
+                    transform: `rotate(-90, ${secondaryYAxisTitleCenterX}, ${yAxisTitleCenterY})`,
                     className: this._classNames.axisAnnotation!,
                     'aria-hidden': true,
                   }}
-                  maxWidth={yAxisTitleMaximumAllowedHeight}
+                  maxWidth={yAxisTitleMaxHeight}
                   {...commonSvgToolTipProps}
                 />
               )}
@@ -754,7 +722,12 @@ export class CartesianChartBase
         </FocusZone>
 
         {!this.props.hideLegend && (
-          <div ref={(e: HTMLDivElement) => (this.legendContainer = e)} className={this._classNames.legendContainer}>
+          <div
+            ref={(e: HTMLDivElement) => {
+              this.legendContainer = e;
+            }}
+            className={this._classNames.legendContainer}
+          >
             {this.props.legendBars}
           </div>
         )}
@@ -771,7 +744,7 @@ export class CartesianChartBase
    * @param chartHoverProps
    * @returns
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-deprecated
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private _generateCallout(calloutProps: any, chartHoverProps: any): JSXElement {
     return (
       <Callout
@@ -1011,8 +984,8 @@ export class CartesianChartBase
 
   private _calculateChartMinWidth = (): number => {
     // Adding 10px for padding on both sides
-    const labelWidth = this._calcMaxLabelWidthWithTransform(this._tickValues) + 10;
-    let minChartWidth = this.margins.left! + this.margins.right! + labelWidth * (this._tickValues.length - 1);
+    const labelWidth = this._calcMaxLabelWidthWithTransform(this._tickLabels) + 10;
+    let minChartWidth = this.margins.left! + this.margins.right! + labelWidth * (this._tickLabels.length - 1);
 
     if (
       [ChartTypes.GroupedVerticalBarChart, ChartTypes.VerticalBarChart, ChartTypes.VerticalStackedBarChart].includes(
@@ -1067,12 +1040,12 @@ export class CartesianChartBase
 
     // Case: truncated labels
     if (this.props.showXAxisLablesTooltip) {
-      const tickValues = x.map(val => {
+      const tickLabels = x.map(val => {
         const numChars = this.props.noOfCharsToTruncate || 4;
         return val.toString().length > numChars ? `${val.toString().slice(0, numChars)}...` : val;
       });
 
-      const longestLabelWidth = calculateLongestLabelWidth(tickValues, `.${this._classNames.xAxis} text`);
+      const longestLabelWidth = calculateLongestLabelWidth(tickLabels, `.${this._classNames.xAxis} text`);
       return Math.ceil(longestLabelWidth);
     }
 
@@ -1121,6 +1094,7 @@ export class CartesianChartBase
         showXAxisLablesTooltip: this.props.showXAxisLablesTooltip || false,
         noOfCharsToTruncate: this.props.noOfCharsToTruncate || 4,
         width: maxXAxisLabelWidth,
+        container: this.chartContainer,
       };
       this._removalValueForTextTuncate = createWrapOfXLabels(wrapLabelProps) ?? 0;
     }
@@ -1138,5 +1112,71 @@ export class CartesianChartBase
       // this.margins.bottom is used as padding here
       this._removalValueForTextTuncate = rotatedHeight + this.margins.bottom!;
     }
+  };
+
+  private _calcMargins = (): IMargins => {
+    let margins = this._getDefaultMargins();
+
+    margins = this._applyTitleMargins(margins);
+    margins = this._applyAnnotationMargins(margins);
+
+    if (this._isRtl) {
+      margins = this._swapRtlMargins(margins);
+    }
+
+    return {
+      ...margins,
+      ...this.props.margins,
+    };
+  };
+
+  private _getDefaultMargins = (): IMargins => {
+    return {
+      top: DEFAULT_MARGIN_NO_TICKS,
+      // Smaller than the default because it is based on the line height rather than
+      // the length of the tick labels.
+      bottom: DEFAULT_MARGIN_WITH_TICKS - 5,
+      // For the actual margin, add the tick size, tick padding, and some extra space to
+      // the width of the longest yaxis tick label (startFromX).
+      left: Math.max(DEFAULT_MARGIN_WITH_TICKS, this.state.startFromX + 20),
+      right: this.props.secondaryYScaleOptions ? DEFAULT_MARGIN_WITH_TICKS : DEFAULT_MARGIN_NO_TICKS,
+    };
+  };
+
+  private _applyTitleMargins = (margins: IMargins): IMargins => {
+    const updated = { ...margins };
+    if (this.props.xAxisTitle !== undefined && this.props.xAxisTitle !== '') {
+      updated.bottom! += VERTICAL_MARGIN_FOR_XAXIS_TITLE;
+    }
+    if (this.props.yAxisTitle !== undefined && this.props.yAxisTitle !== '') {
+      updated.left! += HORIZONTAL_MARGIN_FOR_YAXIS_TITLE;
+    }
+    if (this.props.secondaryYAxistitle !== undefined && this.props.secondaryYAxistitle !== '') {
+      updated.right! += HORIZONTAL_MARGIN_FOR_YAXIS_TITLE;
+    }
+    return updated;
+  };
+
+  private _applyAnnotationMargins = (margins: IMargins): IMargins => {
+    const updated = { ...margins };
+    if (this.props.xAxisAnnotation !== undefined && this.props.xAxisAnnotation !== '') {
+      updated.top! += VERTICAL_MARGIN_FOR_XAXIS_TITLE;
+    }
+    if (
+      this.props.yAxisAnnotation !== undefined &&
+      this.props.yAxisAnnotation !== '' &&
+      (this.props.secondaryYAxistitle === undefined || this.props.secondaryYAxistitle === '')
+    ) {
+      updated.right! += HORIZONTAL_MARGIN_FOR_YAXIS_TITLE;
+    }
+    return updated;
+  };
+
+  private _swapRtlMargins = (margins: IMargins): IMargins => {
+    return {
+      ...margins,
+      left: margins.right,
+      right: margins.left,
+    };
   };
 }
